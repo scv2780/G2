@@ -1,32 +1,51 @@
 {
-  "name": "vue-argon-design-system",
-  "version": "0.1.0",
+  "name": "vue-material-dashboard-2",
+  "version": "3.1.0",
   "private": true,
+  "author": "Creative Tim",
+  "license": "SEE LICENSE IN <https://www.creative-tim.com/license>",
+  "description": "VueJS version of Material Dashboard 2 by Creative Tim",
+  "homepage": "https://demos.creative-tim.com/vue-material-dashboard-2/",
+  "bugs": {
+    "url": "https://github.com/creativetimofficial/vue-material-dashboard-2/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/creativetimofficial/ct-vue-material-dashboard-2.git"
+  },
   "scripts": {
     "dev": "vue-cli-service serve",
-    "build": "cross-env NODE_OPTIONS=--openssl-legacy-provider cross-env CI=false vue-cli-service build",
+    "build": "cross-env CI=false cross-env PUBLIC_URL=/ vue-cli-service build",
     "lint": "vue-cli-service lint"
   },
   "dependencies": {
+    "@popperjs/core": "2.11.8",
     "axios": "^1.13.2",
-    "bootstrap-vue": "^2.0.4",
-    "flatpickr": "^4.5.1",
-    "nouislider": "^11.1.0",
-    "register-service-worker": "^1.5.2",
-    "sass": "^1.94.0",
-    "vue": "^2.6.6",
-    "vue-flatpickr-component": "^8.1.1",
-    "vue-lazyload": "^1.2.6",
-    "vue-router": "^3.0.2",
-    "vue2-transitions": "^0.2.3"
+    "bootstrap": "5.3.2",
+    "chart.js": "4.4.0",
+    "core-js": "3.33.0",
+    "pinia": "^3.0.4",
+    "vue": "3.3.4",
+    "vue-router": "^4.2.5",
+    "vuex": "4.1.0"
   },
   "devDependencies": {
-    "@vue/cli-plugin-babel": "^3.4.0",
-    "@vue/cli-plugin-eslint": "^3.4.0",
-    "@vue/cli-plugin-pwa": "^3.4.0",
-    "@vue/cli-service": "^3.4.0",
+    "@babel/eslint-parser": "7.22.15",
+    "@vue/cli-plugin-babel": "~5.0.8",
+    "@vue/cli-plugin-eslint": "~5.0.8",
+    "@vue/cli-plugin-router": "~5.0.8",
+    "@vue/cli-service": "~5.0.8",
+    "@vue/compiler-sfc": "3.3.4",
+    "@vue/eslint-config-prettier": "8.0.0",
     "cross-env": "^7.0.3",
-    "sass-loader": "10.5.2",
-    "vue-template-compiler": "^2.6.6"
+    "eslint": "8.51.0",
+    "eslint-plugin-prettier": "5.0.1",
+    "eslint-plugin-vue": "9.17.0",
+    "prettier": "3.0.3",
+    "sass": "1.69.3",
+    "sass-loader": "13.3.2"
+  },
+  "overrides": {
+    "consolidate": "1.0.1"
   }
 }
