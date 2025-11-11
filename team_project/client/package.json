@@ -2,8 +2,6 @@
   "name": "vue-material-dashboard-2",
   "version": "3.1.0",
   "private": true,
-  "author": "Creative Tim",
-  "license": "SEE LICENSE IN <https://www.creative-tim.com/license>",
   "description": "VueJS version of Material Dashboard 2 by Creative Tim",
   "homepage": "https://demos.creative-tim.com/vue-material-dashboard-2/",
   "bugs": {
@@ -13,6 +11,9 @@
     "type": "git",
     "url": "git+https://github.com/creativetimofficial/ct-vue-material-dashboard-2.git"
   },
+  "license": "SEE LICENSE IN <https://www.creative-tim.com/license>",
+  "author": "Creative Tim",
+  "main": ".eslintrc.js",
   "scripts": {
     "dev": "vue-cli-service serve",
     "build": "cross-env CI=false cross-env PUBLIC_URL=/ vue-cli-service build",
@@ -31,19 +32,22 @@
     "vuex": "4.1.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.28.5",
     "@babel/eslint-parser": "7.22.15",
+    "@babel/preset-env": "^7.28.5",
     "@vue/cli-plugin-babel": "~5.0.8",
     "@vue/cli-plugin-eslint": "~5.0.8",
     "@vue/cli-plugin-router": "~5.0.8",
     "@vue/cli-service": "~5.0.8",
     "@vue/compiler-sfc": "3.3.4",
     "@vue/eslint-config-prettier": "8.0.0",
+    "babel-loader": "^10.0.0",
     "cross-env": "^7.0.3",
     "eslint": "8.51.0",
     "eslint-plugin-prettier": "5.0.1",
     "eslint-plugin-vue": "9.17.0",
     "prettier": "3.0.3",
-    "sass": "1.69.3",
+    "sass": "^1.69.3",
     "sass-loader": "13.3.2"
   },
   "overrides": {
