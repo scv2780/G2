@@ -8,6 +8,8 @@ import Profile from "../views/Profile.vue";
 import SignIn from "../views/SignIn.vue";
 import SignUp from "../views/SignUp.vue";
 import Test from "../views/Test.vue";
+import survey from "../views/survey.vue";
+import SurveyNew from "../views/SurveyNew.vue";
 
 const routes = [
   {
@@ -64,6 +66,16 @@ const routes = [
     path: "/sign-up",
     name: "SignUp",
     component: SignUp,
+  },
+  {
+    path: "/survey",
+    name: "survey",
+    component: survey,
+  },
+  {
+    path: "/survey/new",
+    name: "survey-new",
+    component: SurveyNew,
   },
 ];
 
