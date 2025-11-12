@@ -1,3 +1,4 @@
+// index.js
 import { createRouter, createWebHistory } from "vue-router";
 import Dashboard from "../views/Dashboard.vue";
 import Tables from "../views/Tables.vue";
@@ -11,6 +12,7 @@ import Test from "../views/Test.vue";
 import survey from "../views/survey.vue";
 import SurveyNew from "../views/SurveyNew.vue";
 import SurveyWrite from "../views/SurveyWrite.vue";
+import organization from "../views/organization.vue";
 
 const routes = [
   {
@@ -24,9 +26,14 @@ const routes = [
     component: Test,
   },
   {
-    path: "/sch",
-    name: "sch",
-    component: Test,
+    path: "/organization",
+    name: "organization",
+    component: organization,
+  },
+  {
+    path: "/managerApprovals",
+    name: "ManagerApprovals",
+    component: () => import("../views/ManagerApprovals.vue"),
   },
   {
     path: "/dashboard",
@@ -73,12 +80,12 @@ const routes = [
     name: "survey",
     component: survey,
   },
-  { 
+  {
     path: "/survey/new",
     name: "survey-new",
-    component: SurveyNew
-   },
-   {
+    component: SurveyNew,
+  },
+  {
     path: "/survey/write",
     name: "survey-write",
     component: SurveyWrite,
