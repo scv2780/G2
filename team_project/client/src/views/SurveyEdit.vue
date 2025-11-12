@@ -1,162 +1,34 @@
-<script setup>
-import { ref, computed } from "vue";
-import { useRouter } from "vue-router";
-import axios from "axios"; // ✅ 백엔드 연결
-
-const router = useRouter();
-const sections = ref([]);
-let uid = 1;
-const newId = () => uid++;
-const isChoiceType = (t) =>
-  ["RADIO", "CHECKBOX"].includes(String(t).toUpperCase());
-
-// 섹션
-function addSection() {
-  sections.value.push({ id: newId(), title: "", desc: "", subsections: [] });
-}
-function removeSection(i) {
-  sections.value.splice(i, 1);
-}
-
-// 서브섹션
-function addSubsection(i) {
-  sections.value[i].subsections.push({
-    id: newId(),
-    title: "",
-    desc: "",
-    items: [],
-  });
-}
-function removeSubsection(i, j) {
-  sections.value[i].subsections.splice(j, 1);
-}
-
-// 질문
-function addItem(i, j) {
-  sections.value[i].subsections[j].items.push({
-    id: newId(),
-    type: "TEXT",
-    text: "",
-    required: false,
-    options: [],
-  });
-}
-function removeItem(i, j, k) {
-  sections.value[i].subsections[j].items.splice(k, 1);
-}
-
-// 타입 변경 시 옵션 초기화
-function onChangeType(item) {
-  if (isChoiceType(item.type)) {
-    if (!Array.isArray(item.options)) item.options = [];
-    if (item.options.length === 0)
-      item.options.push({ id: newId(), label: "", value: "", order: 1 });
-  } else {
-    item.options = [];
-  }
-}
-
-// 옵션 추가/삭제
-function addOption(i, j, k) {
-  const item = sections.value[i].subsections[j].items[k];
-  const nextOrder = (item.options?.length || 0) + 1;
-  item.options.push({ id: newId(), label: "", value: "", order: nextOrder });
-}
-function removeOption(i, j, k, o) {
-  const item = sections.value[i].subsections[j].items[k];
-  item.options.splice(o, 1);
-  item.options.forEach((op, idx) => (op.order = idx + 1));
-}
-
-// 저장할 데이터 구조 (백엔드 insertSurvey에 맞춤)
-const payload = computed(() => ({
-  template: {
-    version_no: "2.0",
-    status: "ACTIVE",
-    created_by: 1,
-    created_at: new Date().toISOString().slice(0, 10),
-  },
-  sections: sections.value.map((sec, sIdx) => ({
-    order: sIdx + 1,
-    title: sec.title,
-    desc: sec.desc,
-    subsections: sec.subsections.map((sub, subIdx) => ({
-      order: subIdx + 1,
-      title: sub.title,
-      desc: sub.desc,
-      items: sub.items.map((it, iIdx) => ({
-        order: iIdx + 1,
-        question_type: it.type,
-        question_text: it.text,
-        is_required: it.required ? "Y" : "N",
-        option_values: isChoiceType(it.type)
-          ? it.options.map((op, k) => ({
-              label: op.label ?? "",
-              value: op.value ?? "",
-              order: op.order ?? k + 1,
-            }))
-          : null,
-      })),
-    })),
-  })),
-}));
-
-// ✅ 저장 함수 (백엔드 연동)
-async function saveDraft() {
-  try {
-    const { data } = await axios.post("/api/survey/new", payload.value);
-    if (data?.success) {
-      alert("조사지 저장 완료!");
-      router.push("/survey-version");
-    } else {
-      alert("저장 실패");
-    }
-  } catch (e) {
-    console.error("save error:", e);
-    alert("서버 오류: " + (e.response?.data?.message || e.message));
-  }
-}
-
-function goBack() {
-  router.push({ name: "surveyVersion" });
-}
-</script>
-
 <template>
   <section class="p-6 max-w-5xl mx-auto">
     <header class="mb-6 flex items-center justify-between">
       <div>
-        <h2 class="text-2xl font-semibold">새 조사지 작성</h2>
+        <h2 class="text-2xl font-semibold">조사지 수정 (새 버전 생성)</h2>
         <p class="text-sm text-gray-500">
-          항목 → 세부항목 → 질문 → 옵션 순으로 구성해요.
+          현재 버전을 복사해서 새로운 세부버전(+0.1)으로 저장합니다.
         </p>
       </div>
       <div class="space-x-2">
         <button class="border px-3 py-2 rounded" @click="goBack">← 목록</button>
         <button
           class="border px-3 py-2 rounded bg-black text-white"
-          @click="saveDraft"
+          :disabled="saving"
+          @click="saveEdit"
         >
-          저장
+          {{ saving ? "저장 중..." : "수정 저장" }}
         </button>
       </div>
     </header>
 
-    <!-- 비어있을 때 -->
+    <div v-if="loading">불러오는 중...</div>
+    <div v-else-if="error" class="text-red-600">{{ error }}</div>
+
     <div
-      v-if="sections.length === 0"
+      v-else-if="sections.length === 0"
       class="text-center py-16 border rounded mb-6"
     >
-      <div class="text-gray-600 mb-4">아직 항목이 없습니다.</div>
-      <button
-        class="border px-4 py-2 rounded bg-black text-white"
-        @click="addSection"
-      >
-        + 항목 추가
-      </button>
+      <div class="text-gray-600 mb-4">아직 불러올 항목이 없습니다.</div>
     </div>
 
-    <!-- 섹션 -->
     <div v-else class="space-y-6">
       <div
         v-for="(sec, sIndex) in sections"
@@ -236,7 +108,6 @@ function goBack() {
               </div>
             </div>
 
-            <!-- 질문 -->
             <div class="space-y-3">
               <div
                 v-for="(it, iIndex) in sub.items"
@@ -272,19 +143,16 @@ function goBack() {
                     <input
                       v-model="it.text"
                       class="border px-3 py-2 rounded w-full"
-                      placeholder="예: 성별을 선택하세요"
                     />
                   </div>
                 </div>
 
                 <div class="mt-2">
                   <label class="inline-flex items-center gap-2 text-sm">
-                    <input type="checkbox" v-model="it.required" />
-                    필수 여부
+                    <input type="checkbox" v-model="it.required" /> 필수 여부
                   </label>
                 </div>
 
-                <!-- 옵션 -->
                 <div v-if="isChoiceType(it.type)" class="mt-4 border-t pt-3">
                   <div class="flex items-center justify-between mb-2">
                     <div class="text-sm font-medium">
@@ -311,14 +179,14 @@ function goBack() {
                         <input
                           v-model="op.label"
                           class="border px-3 py-2 rounded w-full"
-                          placeholder="라벨 (예: 남자)"
+                          placeholder="라벨"
                         />
                       </div>
                       <div class="md:col-span-6">
                         <input
                           v-model="op.value"
                           class="border px-3 py-2 rounded w-full"
-                          placeholder="값 (예: M)"
+                          placeholder="값"
                         />
                       </div>
                       <div class="md:col-span-1 text-right">
@@ -335,27 +203,203 @@ function goBack() {
                   </div>
                 </div>
               </div>
+              <!-- /item -->
             </div>
-            <!-- // 질문 -->
           </div>
+          <!-- /subsection -->
         </div>
       </div>
+      <!-- /section -->
 
-      <!-- 하단 컨트롤 -->
       <div class="flex items-center justify-between">
         <button class="border px-4 py-2 rounded" @click="addSection">
           + 항목 추가
         </button>
         <button
           class="border px-4 py-2 rounded bg-black text-white"
-          @click="saveDraft"
+          :disabled="saving"
+          @click="saveEdit"
         >
-          저장
+          {{ saving ? "저장 중..." : "수정 저장" }}
         </button>
       </div>
     </div>
   </section>
 </template>
+
+<script setup>
+import { ref, onMounted } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import axios from "axios";
+
+const router = useRouter();
+const route = useRoute();
+
+const templateCode = route.params.id; // /survey/edit/:id
+const loading = ref(false);
+const saving = ref(false);
+const error = ref(null);
+const sections = ref([]);
+
+// id 생성기
+const newId = (() => {
+  let id = 1;
+  return () => id++;
+})();
+
+// 선택형 여부
+const isChoiceType = (t) =>
+  ["RADIO", "CHECKBOX"].includes(String(t).toUpperCase());
+
+// CRUD helpers
+function addSection() {
+  sections.value.push({ id: newId(), title: "", desc: "", subsections: [] });
+}
+function removeSection(i) {
+  sections.value.splice(i, 1);
+}
+function addSubsection(sIdx) {
+  sections.value[sIdx].subsections.push({
+    id: newId(),
+    title: "",
+    desc: "",
+    items: [],
+  });
+}
+function removeSubsection(sIdx, subIdx) {
+  sections.value[sIdx].subsections.splice(subIdx, 1);
+}
+function addItem(sIdx, subIdx) {
+  sections.value[sIdx].subsections[subIdx].items.push({
+    id: newId(),
+    type: "TEXT",
+    text: "",
+    required: false,
+    options: [],
+  });
+}
+function removeItem(sIdx, subIdx, iIdx) {
+  sections.value[sIdx].subsections[subIdx].items.splice(iIdx, 1);
+}
+function onChangeType(item) {
+  if (isChoiceType(item.type)) {
+    if (!Array.isArray(item.options)) item.options = [];
+    if (item.options.length === 0)
+      item.options.push({ id: newId(), label: "", value: "" });
+  } else {
+    item.options = [];
+  }
+}
+function addOption(sIdx, subIdx, iIdx) {
+  sections.value[sIdx].subsections[subIdx].items[iIdx].options.push({
+    id: newId(),
+    label: "",
+    value: "",
+  });
+}
+function removeOption(sIdx, subIdx, iIdx, oIdx) {
+  sections.value[sIdx].subsections[subIdx].items[iIdx].options.splice(oIdx, 1);
+}
+
+// 데이터 로드 (원본 → 편집용 draft 구조로 매핑)
+onMounted(async () => {
+  loading.value = true;
+  try {
+    const { data } = await axios.get(`/api/survey/detail/${templateCode}`);
+    const payload = data?.result ?? data; // 통일 응답형식 대응
+    const srcSections = payload.sections || [];
+
+    sections.value = srcSections.map((s) => ({
+      id: newId(),
+      title: s.section_title ?? "",
+      desc: s.section_desc ?? "",
+      subsections: (s.subsections || []).map((sub) => ({
+        id: newId(),
+        title: sub.subsection_title ?? "",
+        desc: sub.subsection_desc ?? "",
+        items: (sub.items || []).map((it) => ({
+          id: newId(),
+          type: (it.question_type || "TEXT").toUpperCase(),
+          text: it.question_text ?? "",
+          required: it.is_required === "Y",
+          options: (Array.isArray(it.option_values)
+            ? it.option_values
+            : []
+          ).map((op, idx) => ({
+            id: newId(),
+            label: op.label ?? "",
+            value: op.value ?? "",
+            order: Number(op.order ?? idx + 1),
+          })),
+        })),
+      })),
+    }));
+  } catch (e) {
+    error.value = e?.response?.data?.message || e.message || "조사지 로드 실패";
+  } finally {
+    loading.value = false;
+  }
+});
+
+// 저장(새 버전 생성)
+async function saveEdit() {
+  if (saving.value) return;
+  saving.value = true;
+  try {
+    const payload = {
+      template: {
+        created_by: 1,
+        created_at: new Date().toISOString().slice(0, 10),
+      },
+      sections: sections.value.map((s, sIdx) => ({
+        order: sIdx + 1,
+        title: s.title,
+        desc: s.desc,
+        subsections: s.subsections.map((sub, subIdx) => ({
+          order: subIdx + 1,
+          title: sub.title,
+          desc: sub.desc,
+          items: sub.items.map((it, iIdx) => ({
+            order: iIdx + 1,
+            question_type: it.type,
+            question_text: it.text,
+            is_required: it.required ? "Y" : "N",
+            option_values: isChoiceType(it.type)
+              ? it.options.map((op, k) => ({
+                  label: op.label ?? "",
+                  value: op.value ?? "",
+                  order: Number(op.order ?? k + 1),
+                }))
+              : null,
+          })),
+        })),
+      })),
+    };
+
+    const { data: res } = await axios.post(
+      `/api/survey/update/${templateCode}`,
+      payload
+    );
+
+    // ✅ 서버 통일 응답({ success, result, message }) 체크
+    if (!res?.success) {
+      throw new Error(res?.message || "저장 실패");
+    }
+
+    alert("새 버전으로 저장 완료!");
+    router.push({ name: "surveyVersion" });
+  } catch (e) {
+    console.error("save error:", e);
+    alert(e?.response?.data?.message || e.message || "저장 실패");
+  } finally {
+    saving.value = false;
+  }
+}
+
+function goBack() {
+  router.push({ name: "surveyVersion" });
+}
+</script>
 
 <style scoped>
 section {

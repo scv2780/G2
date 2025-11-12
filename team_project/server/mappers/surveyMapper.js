@@ -1,52 +1,328 @@
+// server/mappers/surveyMapper.js
 const pool = require("../configs/db");
 const sql = require("../sql/surveySql");
 
+/* -------------------------------------------------
+ * 공통 유틸
+ * ------------------------------------------------- */
+function safeParseJSON(s) {
+  try {
+    return JSON.parse(s);
+  } catch {
+    return [];
+  }
+}
+function normalizeOptions(val) {
+  if (val == null) return [];
+  if (Array.isArray(val)) return val;
+  if (typeof val === "object") {
+    if (Buffer.isBuffer(val)) return safeParseJSON(val.toString("utf8"));
+    return val;
+  }
+  if (typeof val === "string") {
+    const s = val.trim();
+    if (!s) return [];
+    return safeParseJSON(s);
+  }
+  return [];
+}
+// BigInt → Number (JSON 직렬화 보호)
+function safeJSON(v) {
+  return JSON.parse(
+    JSON.stringify(v, (_, x) => (typeof x === "bigint" ? Number(x) : x))
+  );
+}
+
 /* -------------------------------
-  1️⃣ 조사지 목록
+  1) 조사지 버전 목록
 --------------------------------*/
 async function listTemplates() {
   const conn = await pool.getConnection();
   try {
     const rows = await conn.query(sql.listTemplates);
-    return rows;
+    return safeJSON(rows);
   } finally {
     conn.release();
   }
 }
 
 /* -------------------------------
-  2️⃣ 조사지 등록
+  2) 조사지 신규 등록
+     - 메이저 버전 = (현재 최대 + 1.0)
+     - 세부버전 시작 = 메이저와 동일 (예: 4.0 → 4.0)
 --------------------------------*/
 async function insertSurvey(data) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    const templateResult = await conn.query(sql.insertTemplate, [
-      data.template.version_no,
-      data.template.status,
-      data.template.created_by,
-      data.template.created_at,
-    ]);
-    const template_code = templateResult.insertId;
+    const rows = await conn.query(sql.getLatestVersionNo);
+    const latest = rows && rows[0];
+    const nextVersion = latest?.version_no
+      ? (Number(latest.version_no) + 1).toFixed(1)
+      : "1.0";
 
-    const verResult = await conn.query(sql.insertTemplateVer, [
+    const createdBy = data?.template?.created_by ?? 1;
+    const createdAt = data?.template?.created_at ?? new Date();
+    const status = data?.template?.status ?? "ACTIVE";
+
+    const tmplRes = await conn.query(sql.insertTemplate, [
+      nextVersion,
+      status,
+      createdBy,
+      createdAt,
+    ]);
+    const template_code = tmplRes.insertId;
+
+    const verRes = await conn.query(sql.insertTemplateVer, [
       template_code,
-      1,
-      data.template.created_at,
+      nextVersion, // 세부버전 시작 = 메이저와 동일
+      createdAt,
       null,
       "Y",
-      data.template.created_by,
-      data.template.created_at,
+      createdBy,
+      createdAt,
+    ]);
+    const template_ver_code = verRes.insertId;
+
+    for (const sec of data?.sections ?? []) {
+      const secRes = await conn.query(sql.insertSection, [
+        template_ver_code,
+        sec.title ?? "",
+        sec.desc ?? "",
+      ]);
+      const section_code = secRes.insertId;
+
+      for (const sub of sec.subsections ?? []) {
+        const subRes = await conn.query(sql.insertSubsection, [
+          section_code,
+          sub.title ?? "",
+          sub.desc ?? "",
+        ]);
+        const subsection_code = subRes.insertId;
+
+        for (const item of sub.items ?? []) {
+          await conn.query(sql.insertItem, [
+            subsection_code,
+            item.question_type ?? "TEXT",
+            item.question_text ?? "",
+            item.is_required ?? "N",
+            item.option_values ? JSON.stringify(item.option_values) : null,
+          ]);
+        }
+      }
+    }
+
+    await conn.commit();
+    return safeJSON({
+      template_code,
+      template_ver_code,
+      version_no: nextVersion,
+      version_detail_no: nextVersion,
+    });
+  } catch (err) {
+    await conn.rollback();
+    throw err;
+  } finally {
+    conn.release();
+  }
+}
+
+/* -------------------------------
+  3) 최신(활성) 조사지 조회 (트리)
+--------------------------------*/
+async function getLatestSurvey() {
+  const conn = await pool.getConnection();
+  try {
+    const ver = await conn.query(sql.getLatestTemplateVer);
+    if (!ver || ver.length === 0) return null;
+
+    const header = ver[0];
+    const sections = await conn.query(sql.getSectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const subsections = await conn.query(sql.getSubsectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const items = await conn.query(sql.getItemsByVer, [
+      header.template_ver_code,
+    ]);
+
+    for (const it of items)
+      it.option_values = normalizeOptions(it.option_values);
+
+    const subBySection = new Map();
+    for (const s of sections) subBySection.set(s.section_code, []);
+    for (const sub of subsections) {
+      if (!subBySection.has(sub.section_code))
+        subBySection.set(sub.section_code, []);
+      subBySection.get(sub.section_code).push({ ...sub, items: [] });
+    }
+
+    const itemBySub = new Map();
+    for (const sub of subsections) itemBySub.set(sub.subsection_code, []);
+    for (const it of items) {
+      if (!itemBySub.has(it.subsection_code))
+        itemBySub.set(it.subsection_code, []);
+      itemBySub.get(it.subsection_code).push(it);
+    }
+
+    for (const subs of subBySection.values()) {
+      for (const s of subs) s.items = itemBySub.get(s.subsection_code) || [];
+    }
+
+    const sectionsTree = sections.map((s) => ({
+      ...s,
+      subsections: subBySection.get(s.section_code) || [],
+    }));
+
+    return safeJSON({ ...header, sections: sectionsTree });
+  } finally {
+    conn.release();
+  }
+}
+
+/* -------------------------------
+  4) 답변 저장 (제출)
+--------------------------------*/
+async function insertAnswers(body) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const template_ver_code = body.template_ver_code;
+    const written_by = body.written_by ?? 1;
+    const now = new Date();
+
+    const submission = await conn.query(sql.insertSubmission, [
+      template_ver_code,
+      now, // submit_at
+      now, // updated_at
+      written_by,
+      "SUBMITTED",
+      null, // app_at
+    ]);
+    const submit_code = submission.insertId;
+
+    for (const [item_code, value] of Object.entries(body.answers || {})) {
+      let answer_text = null;
+      if (Array.isArray(value)) answer_text = JSON.stringify(value);
+      else if (value !== undefined && value !== null)
+        answer_text = String(value);
+
+      await conn.query(sql.insertAnswer, [
+        Number(item_code),
+        submit_code,
+        answer_text,
+        now,
+      ]);
+    }
+
+    await conn.commit();
+    return safeJSON({ submit_code });
+  } catch (e) {
+    await conn.rollback();
+    throw e;
+  } finally {
+    conn.release();
+  }
+}
+
+/* -------------------------------
+  5) 특정 조사지 상세 조회 (트리)
+--------------------------------*/
+async function getSurveyDetail(templateCode) {
+  const conn = await pool.getConnection();
+  try {
+    const ver = await conn.query(sql.getTemplateVerByCode, [templateCode]);
+    if (!ver || ver.length === 0) return null;
+
+    const header = ver[0];
+    const sections = await conn.query(sql.getSectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const subsections = await conn.query(sql.getSubsectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const items = await conn.query(sql.getItemsByVer, [
+      header.template_ver_code,
+    ]);
+
+    for (const it of items)
+      it.option_values = normalizeOptions(it.option_values);
+
+    const subBySection = new Map();
+    for (const s of sections) subBySection.set(s.section_code, []);
+    for (const sub of subsections) {
+      if (!subBySection.has(sub.section_code))
+        subBySection.set(sub.section_code, []);
+      subBySection.get(sub.section_code).push({ ...sub, items: [] });
+    }
+
+    const itemBySub = new Map();
+    for (const sub of subsections) itemBySub.set(sub.subsection_code, []);
+    for (const it of items) {
+      if (!itemBySub.has(it.subsection_code))
+        itemBySub.set(it.subsection_code, []);
+      itemBySub.get(it.subsection_code).push(it);
+    }
+
+    for (const subs of subBySection.values()) {
+      for (const s of subs) s.items = itemBySub.get(s.subsection_code) || [];
+    }
+
+    const sectionsTree = sections.map((s) => ({
+      ...s,
+      subsections: subBySection.get(s.section_code) || [],
+    }));
+
+    return safeJSON({ ...header, sections: sectionsTree });
+  } finally {
+    conn.release();
+  }
+}
+
+/* -------------------------------
+  6) 기존 조사지 수정 → 새 세부버전 생성
+--------------------------------*/
+async function updateSurveyVersion(templateCode, data) {
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    await conn.query(sql.updateOldVersionToInactive, [templateCode]);
+
+    const nextRows = await conn.query(sql.getNextDetailVersion, [templateCode]);
+    const nextDetail =
+      (nextRows && nextRows[0] && String(nextRows[0].next_detail)) || "1.0";
+
+    const creator = data?.template?.created_by ?? 1;
+    const createdAt = data?.template?.created_at ?? new Date();
+    const verResult = await conn.query(sql.insertTemplateVer, [
+      templateCode,
+      nextDetail,
+      new Date(),
+      null,
+      "Y",
+      creator,
+      createdAt,
     ]);
     const template_ver_code = verResult.insertId;
 
     for (const sec of data.sections || []) {
-      const secRes = await conn.query(sql.insertSection, [template_ver_code, sec.title, sec.desc]);
+      const secRes = await conn.query(sql.insertSection, [
+        template_ver_code,
+        sec.title,
+        sec.desc,
+      ]);
       const section_code = secRes.insertId;
 
       for (const sub of sec.subsections || []) {
-        const subRes = await conn.query(sql.insertSubsection, [section_code, sub.title, sub.desc]);
+        const subRes = await conn.query(sql.insertSubsection, [
+          section_code,
+          sub.title,
+          sub.desc,
+        ]);
         const subsection_code = subRes.insertId;
 
         for (const item of sub.items || []) {
@@ -62,9 +338,8 @@ async function insertSurvey(data) {
     }
 
     await conn.commit();
-    return { template_code, template_ver_code };
+    return safeJSON({ template_ver_code, nextDetail });
   } catch (err) {
-    console.error("[insertSurvey ERROR]", err);
     await conn.rollback();
     throw err;
   } finally {
@@ -73,60 +348,87 @@ async function insertSurvey(data) {
 }
 
 /* -------------------------------
-  3️⃣ 최신 조사지 조회 (이미 완성된 부분)
+  7) 역할별 제출본 목록
 --------------------------------*/
-async function getLatestSurvey() {
+async function listSubmissionsByRole(role, userId) {
   const conn = await pool.getConnection();
   try {
-    const ver = await conn.query(sql.getLatestTemplateVer);
-    if (!ver || ver.length === 0) return null;
+    let rows;
+    if (role === 1) {
+      rows = await conn.query(sql.listSubmissionsByWriter, [userId]);
+    } else if (role === 2) {
+      rows = await conn.query(sql.listSubmissionsByAssignee, [userId]);
+    } else {
+      rows = await conn.query(sql.listAllSubmissions);
+    }
+    return safeJSON(rows);
+  } finally {
+    conn.release();
+  }
+}
 
-    const header = ver[0];
-    const sections = await conn.query(sql.getSectionsByVer, [header.template_ver_code]);
-    const subsections = await conn.query(sql.getSubsectionsByVer, [header.template_ver_code]);
-    const items = await conn.query(sql.getItemsByVer, [header.template_ver_code]);
+/* -------------------------------
+  8) 제출본 상세 조회 (트리 + 답변)
+--------------------------------*/
+async function getSubmissionDetail(submitCode) {
+  const conn = await pool.getConnection();
+  try {
+    const headerRows = await conn.query(sql.getSubmissionHeaderBySubmit, [
+      submitCode,
+    ]);
+    if (!headerRows || headerRows.length === 0) return null;
+    const header = headerRows[0];
 
-    // ✅ 안전 파서
-    function normalizeOptions(val) {
-      if (val == null) return [];
-      if (Array.isArray(val)) return val;
-      if (typeof val === "object") {
-        if (Buffer.isBuffer(val)) {
+    const sections = await conn.query(sql.getSectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const subsections = await conn.query(sql.getSubsectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const items = await conn.query(sql.getItemsByVer, [
+      header.template_ver_code,
+    ]);
+
+    const answers = await conn.query(sql.getAnswersBySubmit, [submitCode]);
+    const answerMap = new Map();
+    for (const a of answers) {
+      let v = a.answer_text;
+      if (typeof v === "string") {
+        const s = v.trim();
+        if (
+          (s.startsWith("[") && s.endsWith("]")) ||
+          (s.startsWith("{") && s.endsWith("}"))
+        ) {
           try {
-            return JSON.parse(val.toString("utf8"));
+            v = JSON.parse(s);
           } catch {
-            return [];
+            /* 그대로 문자열 */
           }
         }
-        return val;
       }
-      if (typeof val === "string") {
-        const s = val.trim();
-        if (!s) return [];
-        try {
-          return JSON.parse(s);
-        } catch {
-          return [];
-        }
-      }
-      return [];
+      answerMap.set(a.item_code, v);
     }
 
     for (const it of items) {
       it.option_values = normalizeOptions(it.option_values);
+      it.answer_text = answerMap.has(it.item_code)
+        ? answerMap.get(it.item_code)
+        : null;
     }
 
     const subBySection = new Map();
     for (const s of sections) subBySection.set(s.section_code, []);
     for (const sub of subsections) {
-      if (!subBySection.has(sub.section_code)) subBySection.set(sub.section_code, []);
+      if (!subBySection.has(sub.section_code))
+        subBySection.set(sub.section_code, []);
       subBySection.get(sub.section_code).push({ ...sub, items: [] });
     }
 
     const itemBySub = new Map();
     for (const sub of subsections) itemBySub.set(sub.subsection_code, []);
     for (const it of items) {
-      if (!itemBySub.has(it.subsection_code)) itemBySub.set(it.subsection_code, []);
+      if (!itemBySub.has(it.subsection_code))
+        itemBySub.set(it.subsection_code, []);
       itemBySub.get(it.subsection_code).push(it);
     }
 
@@ -139,59 +441,41 @@ async function getLatestSurvey() {
       subsections: subBySection.get(s.section_code) || [],
     }));
 
-    const safe = JSON.parse(
-      JSON.stringify(
-        { ...header, sections: sectionsTree },
-        (_, v) => (typeof v === "bigint" ? Number(v) : v)
-      )
-    );
-
-    return safe;
+    return safeJSON({ ...header, sections: sectionsTree });
   } finally {
     conn.release();
   }
 }
 
 /* -------------------------------
-  4️⃣ 답변 저장
+  9) 제출본 수정 (답변 재저장)
 --------------------------------*/
-async function insertAnswers(body) {
+async function updateSubmissionAnswers(submitCode, body) {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
 
-    const template_ver_code = body.template_ver_code;
-    const written_by = body.written_by || 1;
+    await conn.query(sql.deleteAnswersBySubmit, [submitCode]);
 
-    const submission = await conn.query(sql.insertSubmission, [
-      template_ver_code,
-      new Date(),
-      new Date(),
-      written_by,
-      "SUBMITTED",
-      new Date(),
-    ]);
-    const submit_code = submission.insertId;
-
+    const now = new Date();
     for (const [item_code, value] of Object.entries(body.answers || {})) {
       let answer_text = null;
-      if (Array.isArray(value)) {
-        answer_text = JSON.stringify(value);
-      } else if (value !== undefined && value !== null) {
+      if (Array.isArray(value)) answer_text = JSON.stringify(value);
+      else if (value !== undefined && value !== null)
         answer_text = String(value);
-      }
+
       await conn.query(sql.insertAnswer, [
         Number(item_code),
-        submit_code,
+        submitCode,
         answer_text,
-        new Date(),
+        now,
       ]);
     }
 
-    await conn.commit();
+    await conn.query(sql.updateSubmissionUpdatedAt, [now, submitCode]);
 
-    const safe = JSON.parse(JSON.stringify({ submit_code }, (_, v) => (typeof v === "bigint" ? Number(v) : v)));
-    return safe;
+    await conn.commit();
+    return safeJSON({ submit_code: Number(submitCode) });
   } catch (e) {
     await conn.rollback();
     throw e;
@@ -200,12 +484,14 @@ async function insertAnswers(body) {
   }
 }
 
-/* -------------------------------
-  ✅ exports (4개 함수)
---------------------------------*/
 module.exports = {
   listTemplates,
   insertSurvey,
   getLatestSurvey,
   insertAnswers,
+  getSurveyDetail,
+  updateSurveyVersion,
+  listSubmissionsByRole,
+  getSubmissionDetail,
+  updateSubmissionAnswers,
 };

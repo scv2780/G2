@@ -10,9 +10,6 @@ import SignIn from "../views/SignIn.vue";
 import SignUp from "../views/SignUp.vue";
 import Test from "../views/Test.vue";
 import Sponsor from "../views/Sponsor/Sponsor.vue";
-import survey from "../views/survey.vue";
-import SurveyNew from "../views/SurveyNew.vue";
-import SurveyWrite from "../views/SurveyWrite.vue";
 import EventList from "../views/EventList.vue";
 import EventForm from "../views/EventForm.vue";
 import organization from "../views/organization.vue";
@@ -81,20 +78,72 @@ const routes = [
     name: "SignUp",
     component: SignUp,
   },
+  // 조사지 버전 목록
   {
-    path: "/survey",
-    name: "survey",
-    component: survey,
+    path: "/survey-version",
+    name: "surveyVersion",
+    component: () => import("../views/SurveyVersion.vue"),
   },
+
+  // 조사지 추가 (제작)
   {
     path: "/survey/new",
     name: "survey-new",
-    component: SurveyNew,
+    component: () => import("../views/SurveyNew.vue"),
   },
+
+  // 조사지 작성 (최신 템플릿으로 응답 작성)
   {
     path: "/survey/write",
     name: "survey-write",
-    component: SurveyWrite,
+    component: () => import("../views/SurveyWrite.vue"),
+  },
+
+  // 조사지 버전 상세
+  {
+    path: "/survey/detail/:templateCode",
+    name: "survey-detail",
+    component: () => import("../views/SurveyDetail.vue"),
+    props: true,
+  },
+
+  // 조사지 버전 수정
+  {
+    path: "/survey/edit/:id",
+    name: "survey-edit",
+    component: () => import("../views/SurveyEdit.vue"),
+    props: true,
+  },
+
+  // 제출본 목록 (역할별)
+  {
+    path: "/survey-list",
+    name: "surveyList",
+    component: () => import("../views/SurveyList.vue"),
+  },
+
+  // 제출본 상세
+  {
+    path: "/survey/submission/:submitCode",
+    name: "surveySubmissionDetail",
+    component: () => import("../views/SurveySubmissionDetail.vue"),
+    props: true,
+  },
+
+  // 제출본 수정
+  {
+    path: "/survey/submission/:submitCode/edit",
+    name: "surveySubmissionEdit",
+    component: () => import("../views/SurveySubmissionEdit.vue"),
+    props: true,
+  },
+
+  // 담당자 배정
+  {
+    path: "/assign-manager/:submitCode",
+    name: "assignManager",
+    component: () => import("../views/AssignManager.vue"),
+    props: true,
   },
   {
     path: "/event",
