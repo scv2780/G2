@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const testRouter = require("./routes/testRoute");
 const surveyRoute = require("./routes/surveyRoute");
 const schRouter = require("./routes/schRoute");
+const eventRouter = require("./routes/eventRoute");
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use("/test", testRouter);
 
 app.use("/survey", surveyRoute);
 app.use("/sch", schRouter);
+app.use("/event", eventRouter);
 
 
 // const port = process.env.PORT;
