@@ -7,14 +7,34 @@
     :class="isAbsolute ? 'mt-4' : 'mt-0'"
   >
     <div class="px-3 py-1 container-fluid">
+      <!-- 왼쪽에 있는 현재 페이지의 이름 -->
       <breadcrumbs :currentPage="currentRouteName" :color="color" />
+
+      <!-- 중앙 버튼 영역 -->
+      <div
+        class="header-button-group d-flex justify-content-center align-items-center gap-3 flex-grow-1"
+      >
+        <router-link to="/test" class="btn btn-outline-primary btn-sm"
+          >버튼1</router-link
+        >
+        <router-link to="/test" class="btn btn-outline-info btn-sm"
+          >버튼2</router-link
+        >
+        <router-link to="/test" class="btn btn-outline-success btn-sm"
+          >버튼3</router-link
+        >
+      </div>
+
+      <!-- 오른쪽 영역 -->
       <div
         class="mt-2 collapse navbar-collapse mt-sm-0 me-md-0 me-sm-4"
         :class="isRTL ? 'px-0' : 'me-sm-4'"
         id="navbar"
       >
+        <!-- 오른쪽 아이콘 -->
         <div class="ms-auto d-flex align-items-center">
           <ul class="navbar-nav justify-content-end">
+            <!-- 로그인 아이콘 -->
             <li class="nav-item d-flex align-items-center">
               <router-link
                 :to="{ name: 'SignIn' }"
@@ -29,6 +49,8 @@
                 </i>
               </router-link>
             </li>
+
+            <!-- 모바일 사이드바 토글 -->
             <li class="nav-item d-xl-none ps-3 d-flex align-items-center">
               <a
                 href="#"
@@ -43,6 +65,8 @@
                 </div>
               </a>
             </li>
+
+            <!-- 설정 아이콘 -->
             <li class="px-3 nav-item d-flex align-items-center">
               <a
                 class="p-0 nav-link lh-1"
@@ -56,6 +80,8 @@
                 </i>
               </a>
             </li>
+
+            <!-- 알림 메뉴 -->
             <li
               class="nav-item dropdown d-flex align-items-center"
               :class="isRTL ? 'ps-2' : 'pe-2'"
@@ -221,3 +247,17 @@ export default {
   },
 };
 </script>
+
+<style scoped>
+.header-button-group .btn {
+  border-radius: 8px;
+  padding: 5px 14px;
+  font-weight: 500;
+  transition: 0.2s ease-in-out;
+  margin: 0; /* ✅ 불필요한 외부 여백 제거 */
+}
+
+.header-button-group .btn:hover {
+  opacity: 0.85;
+}
+</style>

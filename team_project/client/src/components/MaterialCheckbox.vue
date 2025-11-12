@@ -5,7 +5,8 @@
       class="form-check-input"
       type="checkbox"
       :name="name"
-      :checked="checked"
+      :checked="modelValue"
+      @change="$emit('update:modelValue', $event.target.checked)"
     />
     <label :for="id" class="custom-control-label">
       <slot />
@@ -15,17 +16,20 @@
 
 <script>
 export default {
-  name: "MaterialCheckbox",
+  name: 'MaterialCheckbox',
   props: {
+    modelValue: {
+      type: Boolean,
+      default: false,
+    },
     name: {
       type: String,
-      default: "",
+      default: '',
     },
     id: {
       type: String,
-      default: "",
+      default: '',
     },
-    checked: Boolean,
   },
 };
 </script>

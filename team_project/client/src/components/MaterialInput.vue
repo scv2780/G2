@@ -10,32 +10,36 @@
       class="form-control"
       :class="getClasses(size)"
       :name="name"
-      :value="value"
+      :value="modelValue"
       :placeholder="placeholder"
       :isRequired="isRequired"
       :disabled="disabled"
-      @input="$emit('update:value', $event.target.value)"
+      @input="$emit('update:modelValue', $event.target.value)"
     />
   </div>
 </template>
 
 <script>
-import setMaterialInput from "@/assets/js/material-input.js";
+import setMaterialInput from '@/assets/js/material-input.js';
 
 export default {
-  name: "MaterialInput",
+  name: 'MaterialInput',
   props: {
+    modelValue: {
+      type: [String, Number],
+      default: '',
+    },
     variant: {
       type: String,
-      default: "outline",
+      default: 'outline',
     },
     label: {
       type: String,
-      default: "",
+      default: '',
     },
     size: {
       type: String,
-      default: "default",
+      default: 'default',
     },
     success: {
       type: Boolean,
@@ -51,7 +55,7 @@ export default {
     },
     name: {
       type: String,
-      default: "",
+      default: '',
     },
     id: {
       type: String,
@@ -59,22 +63,22 @@ export default {
     },
     value: {
       type: String,
-      default: "",
+      default: '',
     },
     placeholder: {
       type: String,
-      default: "",
+      default: '',
     },
     type: {
       type: String,
-      default: "text",
+      default: 'text',
     },
     isRequired: {
       type: Boolean,
       default: false,
     },
   },
-  emits: ["update:value"],
+  emits: ['update:modelValue'],
   mounted() {
     setMaterialInput();
   },
@@ -90,9 +94,9 @@ export default {
       let isValidValue;
 
       if (success) {
-        isValidValue = "is-valid";
+        isValidValue = 'is-valid';
       } else if (error) {
-        isValidValue = "is-invalid";
+        isValidValue = 'is-invalid';
       } else {
         isValidValue = null;
       }

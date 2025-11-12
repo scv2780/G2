@@ -7,6 +7,7 @@
           id="bannerCarousel"
           class="carousel slide shadow-sm rounded-4 overflow-hidden"
           data-bs-ride="carousel"
+          data-bs-interval="2000"
         >
           <div class="carousel-inner">
             <!-- 첫 번째 배너 -->
@@ -61,13 +62,15 @@
       </div>
     </div>
 
-    <!-- 📊 하단 카드 영역 -->
+    <!-- 하단 카드 -->
+
+    <!-- 좌측 -->
     <div class="row align-items-stretch">
-      <!-- 왼쪽: 신청 현황 -->
+      <!-- 신청 현황 -->
       <div class="col-lg-6 col-md-12 mb-4">
         <mini-statistics-card
           title="신청 현황"
-          value="72건"
+          value="7억건"
           icon="assignment"
           color="success"
           description="이번 주 기준 신청 현황"
@@ -75,13 +78,14 @@
         />
       </div>
 
-      <!-- 오른쪽: 이벤트 + 후원 -->
+      <!-- 우측 -->
       <div class="col-lg-6 col-md-12">
         <div class="row h-100 d-flex flex-column justify-content-between">
+          <!-- 이벤트 -->
           <div class="col-12 mb-4 flex-fill">
             <mini-statistics-card
               title="이벤트 참여"
-              value="35명"
+              value="2억명"
               icon="event"
               color="info"
               description="이번 달 등록된 이벤트 수"
@@ -89,10 +93,11 @@
             />
           </div>
 
+          <!-- 후원 -->
           <div class="col-12 flex-fill">
             <mini-statistics-card
               title="후원 금액"
-              value="₩1,230,000"
+              value="₩280,000,000,000"
               icon="volunteer_activism"
               color="primary"
               description="총 누적 후원 금액"
