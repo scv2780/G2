@@ -1,10 +1,12 @@
+// app.js
 const express = require("express");
 const morgan = require("morgan");
 const dotenv = require("dotenv");
 const testRouter = require("./routes/testRoute");
 const surveyRoute = require("./routes/surveyRoute");
-const schRouter = require("./routes/schRoute");
+const orgRouter = require("./routes/orgRoute");
 const eventRouter = require("./routes/eventRoute");
+const approvalRouter = require("./routes/approvalRoute.js");
 
 dotenv.config();
 
@@ -17,9 +19,9 @@ app.use(morgan("dev"));
 app.use("/test", testRouter);
 
 app.use("/survey", surveyRoute);
-app.use("/sch", schRouter);
+app.use("/organization", orgRouter);
+app.use("/approvals", approvalRouter);
 app.use("/event", eventRouter);
-
 
 // const port = process.env.PORT;
 const port = process.env.PORT;
