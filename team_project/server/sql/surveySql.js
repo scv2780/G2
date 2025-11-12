@@ -1,54 +1,78 @@
-// 목록
-const selectSurveyList = `
-  SELECT *
-  FROM survey_template
-  ORDER BY template_code DESC
-`;
-
-// 최신(is_current='Y') 버전 1건
-const selectCurrentTemplateVer = `
-  SELECT tv.template_ver_code, t.template_code, t.version_no
-  FROM survey_template_ver tv
-  JOIN survey_template t ON t.template_code = tv.template_code
-  WHERE tv.is_current = 'Y'
-  ORDER BY tv.template_ver_code DESC
-  LIMIT 1
-`;
-
-// 특정 버전의 전체 구조 (섹션-서브섹션-아이템)
-const selectStructureByTemplateVer = `
-  SELECT
-    s.section_code, s.section_title, s.section_desc,
-    ss.subsection_code, ss.subsection_title, ss.subsection_desc,
-    i.item_code, i.question_type, i.question_text, i.is_required
-  FROM survey_section s
-  LEFT JOIN survey_subsection ss ON ss.section_code = s.section_code
-  LEFT JOIN survey_item i ON i.subsection_code = ss.subsection_code
-  WHERE s.template_ver_code = ?
-  ORDER BY s.section_code, ss.subsection_code, i.item_code
-`;
-
-// ✅ 제출본 생성 (survey_submission)
-const insertSurveySubmission = `
-  INSERT INTO survey_submission
-    (template_ver_code, submit_at, updated_at, written_by, assi_by, app_by, status, app_at)
-  VALUES
-    (?, ?, ?, ?, ?, ?, ?, ?)
-`;
-
-// ✅ 답변 저장 (survey_answer)
-const insertSurveyAnswer = `
-  INSERT INTO survey_answer
-    (item_code, submit_code, answer_text, created_at)
-  VALUES
-    (?, ?, ?, ?)
-`;
-
 module.exports = {
-  selectSurveyList,
-  selectCurrentTemplateVer,
-  selectStructureByTemplateVer,
-  insertSurveySubmission,
-  insertSurveyAnswer,
-  // (기존 목록/버전 생성 쿼리 등도 그대로 export)
+  // 목록
+  listTemplates: `
+    SELECT template_code, version_no, status, created_by, created_at
+    FROM survey_template
+    ORDER BY template_code DESC
+  `,
+
+  // 생성
+  insertTemplate: `
+    INSERT INTO survey_template (version_no, status, created_by, created_at)
+    VALUES (?, ?, ?, ?)
+  `,
+  insertTemplateVer: `
+    INSERT INTO survey_template_ver (
+      template_code, version_detail_no, effective_from, effective_to,
+      is_current, created_by, created_at
+    )
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `,
+  insertSection: `
+    INSERT INTO survey_section (template_ver_code, section_title, section_desc)
+    VALUES (?, ?, ?)
+  `,
+  insertSubsection: `
+    INSERT INTO survey_subsection (section_code, subsection_title, subsection_desc)
+    VALUES (?, ?, ?)
+  `,
+  insertItem: `
+    INSERT INTO survey_item (
+      subsection_code, question_type, question_text, is_required, option_values
+    )
+    VALUES (?, ?, ?, ?, ?)
+  `,
+
+  // ✅ 최신 템플릿 버전 찾기
+  getLatestTemplateVer: `
+    SELECT template_ver_code, template_code, version_detail_no
+    FROM survey_template_ver
+    WHERE is_current = 'Y'
+    ORDER BY effective_from DESC, template_ver_code DESC
+    LIMIT 1
+  `,
+
+  // ✅ 해당 버전의 섹션/서브섹션/아이템
+  getSectionsByVer: `
+    SELECT section_code, section_title, section_desc
+    FROM survey_section
+    WHERE template_ver_code = ?
+    ORDER BY section_code
+  `,
+  getSubsectionsByVer: `
+    SELECT sub.subsection_code, sub.section_code, sub.subsection_title, sub.subsection_desc
+    FROM survey_subsection sub
+    JOIN survey_section sec ON sec.section_code = sub.section_code
+    WHERE sec.template_ver_code = ?
+    ORDER BY sub.subsection_code
+  `,
+  getItemsByVer: `
+    SELECT itm.item_code, sub.subsection_code, itm.question_type, itm.question_text, itm.is_required, itm.option_values
+    FROM survey_item itm
+    JOIN survey_subsection sub ON sub.subsection_code = itm.subsection_code
+    JOIN survey_section sec ON sec.section_code = sub.section_code
+    WHERE sec.template_ver_code = ?
+    ORDER BY itm.item_code
+  `,
+
+  // ✅ 제출/답변 저장
+  insertSubmission: `
+    INSERT INTO survey_submission (
+      template_ver_code, submit_at, updated_at, written_by, status, app_at
+    ) VALUES (?, ?, ?, ?, ?, ?)
+  `,
+  insertAnswer: `
+    INSERT INTO survey_answer (item_code, submit_code, answer_text, created_at)
+    VALUES (?, ?, ?, ?)
+  `,
 };

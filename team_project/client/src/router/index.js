@@ -10,6 +10,7 @@ import SignUp from "../views/SignUp.vue";
 import Test from "../views/Test.vue";
 import survey from "../views/survey.vue";
 import SurveyNew from "../views/SurveyNew.vue";
+import SurveyWrite from "../views/SurveyWrite.vue";
 
 const routes = [
   {
@@ -72,10 +73,15 @@ const routes = [
     name: "survey",
     component: survey,
   },
-  {
+  { 
     path: "/survey/new",
     name: "survey-new",
-    component: SurveyNew,
+    component: SurveyNew
+   },
+   {
+    path: "/survey/write",
+    name: "survey-write",
+    component: SurveyWrite,
   },
 ];
 

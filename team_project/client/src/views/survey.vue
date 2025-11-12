@@ -1,35 +1,6 @@
-<script setup>
-import { ref, onMounted } from "vue";
-import { useRouter } from "vue-router";
-import axios from "axios";
-
-const router = useRouter();
-const list = ref([]);
-const loading = ref(false);
-const error = ref(null);
-
-// 목록 가져오기
-onMounted(async () => {
-  loading.value = true;
-  try {
-    // ✅ vite.config.js에서 /api 프록시가 3000 포트로 연결되어 있어야 함
-    const { data } = await axios.get("/api/survey");
-    list.value = Array.isArray(data) ? data : [];
-  } catch (e) {
-    error.value = e.message || "목록 조회 중 오류";
-  } finally {
-    loading.value = false;
-  }
-});
-
-function goToNew() {
-  router.push("/survey/new");
-}
-</script>
-
 <template>
   <section class="p-6">
-    <h2 class="text-2xl font-semibold mb-4">조사지 목록</h2>
+    <h2 class="text-2xl font-semibold mb-4">버전별 조사지 목록</h2>
 
     <div v-if="loading">불러오는 중...</div>
     <div v-else-if="error" class="text-red-600">{{ error }}</div>
@@ -54,24 +25,45 @@ function goToNew() {
       </tbody>
     </table>
 
-    <!-- 작성하기 버튼 -->
-    <div class="mt-4 text-right">
-      <button
-        @click="goToNew"
-        class="border px-4 py-2 rounded bg-black text-white"
-      >
-        작성하기
+    <div class="mt-4 text-right space-x-2">
+      <!-- 관리자용 -->
+      <button @click="goToNew" class="border px-4 py-2 rounded bg-black text-white">
+        조사지 제작하기
+      </button>
+      <!-- ✅ 일반사용자용 -->
+      <button @click="goToWrite" class="border px-4 py-2 rounded bg-gray-800 text-white">
+        조사지 작성하기
       </button>
     </div>
   </section>
 </template>
 
-<style scoped>
-table {
-  border: 1px solid #ddd;
+<script setup>
+import { ref, onMounted } from "vue";
+import { useRouter } from "vue-router";
+import axios from "axios";
+
+const router = useRouter();
+const list = ref([]);
+const loading = ref(false);
+const error = ref(null);
+
+onMounted(async () => {
+  loading.value = true;
+  try {
+    const { data } = await axios.get("/api/survey");
+    list.value = Array.isArray(data) ? data : [];
+  } catch (e) {
+    error.value = e.message || "목록 조회 중 오류";
+  } finally {
+    loading.value = false;
+  }
+});
+
+function goToNew() {
+  router.push("/survey/new");
 }
-th,
-td {
-  border: 1px solid #ddd;
+function goToWrite() {
+  router.push("/survey/write"); // ✅ 새 페이지로 이동
 }
-</style>
+</script>
