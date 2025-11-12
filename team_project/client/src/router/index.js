@@ -29,6 +29,8 @@ const routes = [
     path: "/sponsor",
     name: "Sponsor",
     component: Sponsor,
+  },
+  {
     path: "/organization",
     name: "organization",
     component: organization,
