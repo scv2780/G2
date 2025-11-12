@@ -12,6 +12,8 @@ import Test from "../views/Test.vue";
 import survey from "../views/survey.vue";
 import SurveyNew from "../views/SurveyNew.vue";
 import SurveyWrite from "../views/SurveyWrite.vue";
+import EventList from "../views/EventList.vue";
+import EventForm from "../views/EventForm.vue";
 import organization from "../views/organization.vue";
 
 const routes = [
@@ -89,6 +91,16 @@ const routes = [
     path: "/survey/write",
     name: "survey-write",
     component: SurveyWrite,
+  },
+  {
+    path: "/event",
+    name: "EventList",
+    component: EventList,
+  },
+  {
+    path: "/event/add",
+    name: "EventAdd",
+    component: EventForm,
   },
 ];
 

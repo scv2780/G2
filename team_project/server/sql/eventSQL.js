@@ -4,6 +4,7 @@
 const selectEventList = `
   SELECT event_code
         ,org_code
+        ,event_type
         ,user_code
         ,event_name
         ,event_content
@@ -43,11 +44,12 @@ SELECT event_code
 `;
 
 // 이벤트 등록
-const eventInsert = `
+const insertEvent = `
 INSERT INTO event (
   org_code
  ,user_code
  ,event_name
+ ,event_type
  ,event_content
  ,event_location
  ,target_audience
@@ -59,18 +61,18 @@ INSERT INTO event (
  ,recruit_status
  ,event_register_date
  ,register_status)
-VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
+VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? )
 `;
 
 // 이벤트 수정
-const eventUpdate = `
+const updateEvent = `
 UPDATE event
 SET ?
 WHERE event_code = ?
 `;
 
 // 이벤트 삭제
-const eventDelete = `
+const deleteEvent = `
 DELETE FROM event
 WHERE event_code = ?`;
 
@@ -99,9 +101,9 @@ const selectSubEventOne = `
 `;
 
 // 세부 이벤트 등록
-const subEventInsert = `
+const insertSubEvent = `
 INSERT INTO sub_event (
-  ,sub_event_name
+   sub_event_name
   ,sub_event_start_date
   ,sub_event_end_date
   ,sub_recruit_status
@@ -110,26 +112,26 @@ VALUES ( ?, ?, ?, ?, ? )
 `;
 
 // 세부 이벤트 수정
-const subEventUpdate = `
+const updateSubEvent = `
 UPDATE sub_event
 SET ?
 WHERE sub_event_code = ?
 `;
 
 // 세부 이벤트 삭제
-const subEventDelete = `
+const deleteSubEvent = `
 DELETE FROM sub_event
 WHERE sub_event_code = ?`;
 
 module.exports = {
   selectEventList,
   selectEventOne,
-  eventInsert,
-  eventUpdate,
-  eventDelete,
+  insertEvent,
+  updateEvent,
+  deleteEvent,
   selectSubEventList,
   selectSubEventOne,
-  subEventInsert,
-  subEventUpdate,
-  subEventDelete,
+  insertSubEvent,
+  updateSubEvent,
+  deleteSubEvent,
 };
