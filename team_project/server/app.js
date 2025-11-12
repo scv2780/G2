@@ -8,21 +8,24 @@ const orgRouter = require("./routes/orgRoute");
 const eventRouter = require("./routes/eventRoute");
 const sponsorRouter = require("./routes/sponsorRoute");
 const approvalRouter = require("./routes/approvalRoute.js");
+const authRouter = require('./routes/authUser');
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(morgan("dev"));
+app.use(morgan('dev'));
 
 // 라우터
 // app.use('/api', testRouter);
+
 app.use("/test", testRouter);
 app.use("/sponsor", sponsorRouter);
 app.use("/survey", surveyRoute);
 app.use("/organization", orgRouter);
 app.use("/approvals", approvalRouter);
 app.use("/event", eventRouter);
+app.use('/user', authRouter);
 
 // const port = process.env.PORT;
 const port = process.env.PORT;

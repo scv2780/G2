@@ -34,71 +34,125 @@
               >
                 <div class="card card-plain">
                   <div class="pb-0 card-header bg-transparent mb-4">
-                    <h4 class="font-weight-bolder">Sign In</h4>
-                    <p class="mb-0">
-                      Enter your email and password to register
-                    </p>
+                    <h4 class="font-weight-bolder">회원가입</h4>
+                    <p class="mb-0">대충 설명하는 곳</p>
                   </div>
                   <div class="card-body">
-                    <form role="form">
+                    <!-- from -->
+                    <form role="form" @submit.prevent v-if="step === 1">
+                      <!-- 아이디 -->
                       <div class="mb-3">
-                        <material-input
-                          id="name"
-                          type="text"
-                          label="Name"
-                          name="name"
-                          size="lg"
-                        />
+                        <div class="d-flex align-items-end">
+                          <!-- 아이디 입력창 -->
+                          <div class="flex-grow-1 me-2">
+                            <material-input
+                              id="user-id"
+                              type="text"
+                              label="여긴 아이디"
+                              size="lg"
+                              v-model="userId"
+                            />
+                          </div>
+
+                          <!-- 중복확인 버튼 -->
+                          <material-button
+                            variant="gradient"
+                            color="success"
+                            size="lg"
+                            class="py-2 px-3"
+                            type="button"
+                            @click="checkId"
+                          >
+                            중복확인
+                          </material-button>
+                        </div>
                       </div>
+
+                      <!-- 비밀번호 -->
                       <div class="mb-3">
                         <material-input
-                          id="email"
-                          type="email"
-                          label="Email"
-                          name="email"
-                          size="lg"
-                        />
-                      </div>
-                      <div class="mb-3">
-                        <material-input
-                          id="password"
+                          id="user-pw"
                           type="password"
-                          label="Password"
-                          name="password"
+                          label="여긴 비밀번호"
                           size="lg"
+                          v-model="userPw"
                         />
                       </div>
+
+                      <!-- 비밀번호 확인 -->
+                      <div class="mb-3">
+                        <material-input
+                          id="user-pw-check"
+                          type="password"
+                          label="여긴 비밀번호 확인"
+                          size="lg"
+                          v-model="pwCheck"
+                        />
+                      </div>
+
+                      <!-- 이용약관 체크박스 -->
                       <material-checkbox
                         id="flexCheckDefault"
                         class="font-weight-light"
-                        checked
+                        v-model="agree"
                       >
-                        I agree the
+                        이용약관 동의합니다 체크박스
                         <a
                           href="../../../pages/privacy.html"
                           class="text-dark font-weight-bolder"
-                          >Terms and Conditions</a
+                          >대충 이건 이용약관</a
                         >
                       </material-checkbox>
-                      <div class="text-center">
+
+                      <!-- 가입 유형 선택 -->
+                      <div class="d-flex justify-content-between gap-3 mt-4">
+                        <!-- 개인 회원 -->
                         <material-button
-                          class="mt-4"
                           variant="gradient"
                           color="success"
-                          fullWidth
                           size="lg"
-                          >Sign Up</material-button
+                          class="w-45"
+                          type="button"
+                          @click="goToStep('user')"
+                          >개인 회원</material-button
+                        >
+
+                        <!-- 기관 회원 -->
+                        <material-button
+                          variant="gradient"
+                          color="success"
+                          size="lg"
+                          class="w-45"
+                          type="button"
+                          @click="goToStep('org')"
+                          >기관 회원</material-button
                         >
                       </div>
                     </form>
+
+                    <!-- 개인 회원 -->
+                    <sign-up-user-form
+                      v-else-if="step === 'user'"
+                      :base="{ userId, userPw, agree }"
+                      @submit="handleSubmit('individual', $event)"
+                      @back="step = 1"
+                    />
+
+                    <!-- 기관 회원 -->
+                    <sign-up-org-form
+                      v-else-if="step === 'org'"
+                      :base="{ userId, userPw, agree }"
+                      @submit="handleSubmit('organization', $event)"
+                      @back="step = 1"
+                    />
                   </div>
                   <div class="px-1 pt-0 text-center card-footer px-lg-2">
                     <p class="mx-auto mb-4 text-sm">
-                      Don't have an account?
+                      이미 계정이 있어요?
                       <router-link
                         :to="{ name: 'SignIn' }"
                         class="text-success text-gradient font-weight-bold"
-                        >Sign In</router-link
+                        >그냥 로그인 ㄱㄱ</router-link
                       >
                     </p>
                   </div>
@@ -113,33 +167,82 @@
 </template>
 
 <script>
-import Navbar from "@/examples/PageLayout/Navbar.vue";
-import MaterialInput from "@/components/MaterialInput.vue";
-import MaterialCheckbox from "@/components/MaterialCheckbox.vue";
-import MaterialButton from "@/components/MaterialButton.vue";
-const body = document.getElementsByTagName("body")[0];
-import { mapMutations } from "vuex";
+import Navbar from '@/examples/PageLayout/Navbar.vue';
+import MaterialInput from '@/components/MaterialInput.vue';
+import MaterialCheckbox from '@/components/MaterialCheckbox.vue';
+import MaterialButton from '@/components/MaterialButton.vue';
+const body = document.getElementsByTagName('body')[0];
+import { mapMutations } from 'vuex';
+import SignUpUserForm from '@/components/SignUpUserForm.vue';
+import SignUpOrgForm from '@/components/SignUpOrgForm.vue';
+import { checkId as checkUserId } from '../api/user';
 
 export default {
-  name: "sign-up",
+  name: 'sign-up',
   components: {
     Navbar,
     MaterialInput,
     MaterialCheckbox,
     MaterialButton,
+    SignUpUserForm,
+    SignUpOrgForm,
+  },
+  data() {
+    return {
+      step: 1,
+      userId: '',
+      userPw: '',
+      pwCheck: '',
+      agree: false,
+    };
   },
   beforeMount() {
     this.toggleEveryDisplay();
     this.toggleHideConfig();
-    body.classList.remove("bg-gray-100");
+    body.classList.remove('bg-gray-100');
   },
   beforeUnmount() {
     this.toggleEveryDisplay();
     this.toggleHideConfig();
-    body.classList.add("bg-gray-100");
+    body.classList.add('bg-gray-100');
   },
   methods: {
-    ...mapMutations(["toggleEveryDisplay", "toggleHideConfig"]),
+    ...mapMutations(['toggleEveryDisplay', 'toggleHideConfig']),
+
+    // 중복확인
+    async checkId() {
+      if (!this.userId) {
+        alert('입력된 아이디가 없음');
+        return;
+      }
+      try {
+        const result = await checkUserId(this.userId);
+
+        // ok -> 사용 가능한지 체크
+        if (result.ok) {
+          alert('사용 가능');
+        } else {
+          alert('이미 사용중인 아이디');
+        }
+      } catch (err) {
+        alert('중복확인 오류');
+      }
+    },
+
+    goToStep(type) {
+      // if (!this.userId || !this.userPw) {
+      //   return alert('입력된 아이디와 비밀번호가 없음.');
+      // }
+      // if (this.userPw !== this.pwCheck) {
+      //   return alert('비밀번호가 불일치.');
+      // }
+      if (!this.agree) {
+        return alert('이용약관 동의 ㄱㄱ');
+      }
+
+      alert('다음 페이지로 이동합니다');
+      this.step = type; // user / org
+    },
   },
 };
 </script>
