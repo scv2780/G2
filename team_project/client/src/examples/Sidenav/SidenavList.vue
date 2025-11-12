@@ -4,6 +4,15 @@
     id="sidenav-collapse-main"
   >
     <ul class="navbar-nav">
+      <li class="mt-3 nav-item">
+        <h6
+          class="text-xs ps-4 text-uppercase font-weight-bolder text-white"
+          :class="$store.state.isRTL ? 'me-4' : 'ms-2'"
+        >
+          MAIN PAGES
+        </h6>
+      </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -17,6 +26,7 @@
           </template>
         </sidenav-collapse>
       </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -30,6 +40,7 @@
           </template>
         </sidenav-collapse>
       </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -43,6 +54,7 @@
           </template>
         </sidenav-collapse>
       </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -58,6 +70,7 @@
           </template>
         </sidenav-collapse>
       </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -71,6 +84,9 @@
           </template>
         </sidenav-collapse>
       </li>
+
+      <hr class="horizontal light my-3" />
+
       <li class="mt-3 nav-item">
         <h6
           class="text-xs ps-4 text-uppercase font-weight-bolder text-white"
@@ -79,6 +95,7 @@
           ACCOUNT PAGES
         </h6>
       </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -92,6 +109,7 @@
           </template>
         </sidenav-collapse>
       </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -105,6 +123,7 @@
           </template>
         </sidenav-collapse>
       </li>
+
       <li class="nav-item">
         <sidenav-collapse
           url="#"
@@ -119,6 +138,7 @@
         </sidenav-collapse>
       </li>
     </ul>
+
     <div class="sidenav-footer position-absolute w-100 bottom-0">
       <div class="mx-3">
         <a
@@ -132,6 +152,7 @@
   </div>
 </template>
 <script>
+// (Script 부분은 변경 없음)
 import SidenavCollapse from "./SidenavCollapse.vue";
 
 export default {

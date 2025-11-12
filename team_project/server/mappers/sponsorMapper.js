@@ -15,5 +15,19 @@ async function sponsorSQL() {
     if (sponsorConn) sponsorConn.release();
   }
 }
+async function programAddSQL() {
+  let sponsorConn;
+  try {
+    sponsorConn = await pool.getConnection();
+    const sponsorRows = await sponsorConn.query(sponsorSql.sponsor_program);
+    console.log("[ sponsorConn.js || 성공 ]");
+    return sponsorRows;
+  } catch (err) {
+    console.error("[ sponsorConn.js || 실패 ]", err.message);
+    throw err;
+  } finally {
+    if (sponsorConn) sponsorConn.release();
+  }
+}
 
-module.exports = { sponsorSQL };
+module.exports = { sponsorSQL, programAddSQL };
