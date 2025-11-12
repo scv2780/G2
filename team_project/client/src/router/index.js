@@ -147,11 +147,13 @@ const routes = [
     component: () => import("../views/AssignManager.vue"),
     props: true,
   },
+  // 이벤트 목록
   {
     path: "/event",
     name: "EventList",
     component: EventList,
   },
+  // 이벤트 등록
   {
     path: "/event/add",
     name: "EventAdd",

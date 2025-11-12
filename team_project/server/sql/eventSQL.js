@@ -106,7 +106,7 @@ INSERT INTO sub_event (
    sub_event_name
   ,sub_event_start_date
   ,sub_event_end_date
-  ,sub_recruit_status
+  ,sub_recruit_count
   ,event_code)
 VALUES ( ?, ?, ?, ?, ? )
 `;

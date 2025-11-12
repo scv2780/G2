@@ -27,10 +27,10 @@ async function getEvent(event_code) {
   }
 }
 
-// ✅ 이벤트 등록
+// 이벤트 + 세부 이벤트 등록
 async function createEvent(data) {
   try {
-    const result = await eventMapper.addEvent(data);
+    const result = await eventMapper.addEventWithSub(data);
     return result;
   } catch (err) {
     console.error("[eventService.js || 이벤트 등록 실패]", err.message);
@@ -38,10 +38,10 @@ async function createEvent(data) {
   }
 }
 
-// ✅ 이벤트 수정
+// 이벤트 + 세부 이벤트 수정
 async function modifyEvent(data, event_code) {
   try {
-    const result = await eventMapper.updateEvent(data, event_code);
+    const result = await eventMapper.updateEventWithSub(data, event_code);
     return result;
   } catch (err) {
     console.error("[eventService.js || 이벤트 수정 실패]", err.message);

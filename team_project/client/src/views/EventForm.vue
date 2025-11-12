@@ -161,41 +161,28 @@ const removeTime = (index) => eventTimes.value.splice(index, 1);
 // 등록/수정
 const submitForm = async () => {
   try {
-    // 1. 이벤트 테이블 저장
-    const eventObj = {
+    // 1️⃣ 이벤트 + 세부 이벤트 통합 객체
+    const payload = {
       ...eventInfo.value,
       event_register_date: formattedRegisterDate.value,
+      sub_events:
+        eventInfo.value.event_type === "DD2"
+          ? eventTimes.value.map((e) => ({
+              sub_event_name: e.name,
+              sub_recruit_count: e.max_participants,
+              sub_event_start_date: e.start,
+              sub_event_end_date: e.end,
+            }))
+          : [],
     };
 
-    let savedEvent;
-
+    // 2️⃣ 등록/수정 API 호출
     if (isUpdated.value) {
-      savedEvent = await axios.put(
-        `/api/event/${eventInfo.value.event_code}`,
-        eventObj
-      );
+      await axios.put(`/api/event/${eventInfo.value.event_code}`, payload);
       alert("이벤트 수정 완료!");
     } else {
-      savedEvent = await axios.post("/api/event", eventObj);
+      await axios.post("/api/event", payload);
       alert("이벤트 등록 완료!");
-    }
-
-    const eventCode =
-      savedEvent.data.data.event_code || eventInfo.value.event_code;
-
-    // 2. 예약제일 경우 세부 이벤트 저장
-    if (eventInfo.value.event_type === "DD2" && eventTimes.value.length > 0) {
-      const subEventObj = {
-        event_code: eventCode,
-        sub_events: eventTimes.value.map((e) => ({
-          sub_event_name: e.name,
-          sub_recruit_count: e.max_participants,
-          sub_event_start_date: e.start,
-          sub_event_end_date: e.end,
-        })),
-      };
-
-      await axios.post("/api/event/sub-events", subEventObj);
     }
 
     router.push("/event");
