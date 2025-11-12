@@ -1,252 +1,254 @@
-<!-- views/SurveyNew.vue -->
 <script setup>
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { useRouter } from "vue-router";
-import axios from "axios";
+import axios from "axios"; // ✅ 백엔드 연결
 
 const router = useRouter();
-
-// 작성 메타 (원하면 화면에서 입력 가능하도록 확장)
-const meta = ref({
-  status: "ACTIVE",
-  created_by: 1, // 로그인 연동 시 교체
-  created_at: new Date().toISOString().slice(0, 10),
-});
-
-// 데이터 구조: 섹션 → 서브섹션 → 질문
 const sections = ref([]);
-// 섹션: { title, desc, order, subsections: [...] }
-// 서브섹션: { title, desc, order, items: [...] }
-// 아이템: { type, text, required, order }
+let uid = 1;
+const newId = () => uid++;
+const isChoiceType = (t) => ["RADIO", "CHECKBOX"].includes(String(t).toUpperCase());
 
+// 섹션
 function addSection() {
-  sections.value.push({
-    title: "",
-    desc: "",
-    order: sections.value.length + 1,
-    subsections: [],
-  });
+  sections.value.push({ id: newId(), title: "", desc: "", subsections: [] });
 }
-function removeSection(idx) {
-  sections.value.splice(idx, 1);
-  sections.value.forEach((s, i) => (s.order = i + 1));
+function removeSection(i) {
+  sections.value.splice(i, 1);
 }
 
-function addSubsection() {
-  if (!sections.value.length) {
-    addSection();
-  }
-  const s = sections.value[sections.value.length - 1];
-  s.subsections.push({
-    title: "",
-    desc: "",
-    order: s.subsections.length + 1,
-    items: [],
-  });
+// 서브섹션
+function addSubsection(i) {
+  sections.value[i].subsections.push({ id: newId(), title: "", desc: "", items: [] });
 }
-function removeSubsection(sIdx, ssIdx) {
-  sections.value[sIdx].subsections.splice(ssIdx, 1);
-  sections.value[sIdx].subsections.forEach((ss, i) => (ss.order = i + 1));
+function removeSubsection(i, j) {
+  sections.value[i].subsections.splice(j, 1);
 }
 
-function addItem() {
-  if (!sections.value.length) addSection();
-  const s = sections.value[sections.value.length - 1];
-  if (!s.subsections.length) addSubsection();
-  const ss = s.subsections[s.subsections.length - 1];
-  ss.items.push({
-    type: "TEXT", // TEXT | RADIO | CHECKBOX 등
+// 질문
+function addItem(i, j) {
+  sections.value[i].subsections[j].items.push({
+    id: newId(),
+    type: "TEXT",
     text: "",
-    required: "N",
-    order: ss.items.length + 1,
+    required: false,
+    options: [],
   });
 }
-function removeItem(sIdx, ssIdx, iIdx) {
-  sections.value[sIdx].subsections[ssIdx].items.splice(iIdx, 1);
-  sections.value[sIdx].subsections[ssIdx].items.forEach(
-    (it, i) => (it.order = i + 1)
-  );
+function removeItem(i, j, k) {
+  sections.value[i].subsections[j].items.splice(k, 1);
 }
 
-const saving = ref(false);
-async function submitAll() {
-  // 간단 유효성
-  if (!sections.value.length)
-    return alert("최소 1개 이상의 항목(섹션)을 추가하세요.");
-
-  const payload = {
-    // 버전 생성 지시 (백엔드에서 자동으로 2.0 계산 or 고정)
-    version_no: "2.0", // 요구: 새 템플릿 버전 2.0
-    version_detail_no: "2.0.0", // 세부 버전 (원하면 규칙 변경)
-    status: meta.value.status,
-    created_by: meta.value.created_by,
-    created_at: meta.value.created_at,
-    structure: sections.value, // 섹션/서브섹션/질문 전체 구조
-  };
-
-  try {
-    saving.value = true;
-    await axios.post("/api/survey/new-version", payload);
-    router.push("/survey");
-  } catch (e) {
-    alert(e?.response?.data?.message || e.message || "저장 중 오류");
-  } finally {
-    saving.value = false;
+// 타입 변경 시 옵션 초기화
+function onChangeType(item) {
+  if (isChoiceType(item.type)) {
+    if (!Array.isArray(item.options)) item.options = [];
+    if (item.options.length === 0)
+      item.options.push({ id: newId(), label: "", value: "", order: 1 });
+  } else {
+    item.options = [];
   }
+}
+
+// 옵션 추가/삭제
+function addOption(i, j, k) {
+  const item = sections.value[i].subsections[j].items[k];
+  const nextOrder = (item.options?.length || 0) + 1;
+  item.options.push({ id: newId(), label: "", value: "", order: nextOrder });
+}
+function removeOption(i, j, k, o) {
+  const item = sections.value[i].subsections[j].items[k];
+  item.options.splice(o, 1);
+  item.options.forEach((op, idx) => (op.order = idx + 1));
+}
+
+// 저장할 데이터 구조 (백엔드 insertSurvey에 맞춤)
+const payload = computed(() => ({
+  template: {
+    version_no: "2.0",
+    status: "ACTIVE",
+    created_by: 1,
+    created_at: new Date().toISOString().slice(0, 10),
+  },
+  sections: sections.value.map((sec, sIdx) => ({
+    order: sIdx + 1,
+    title: sec.title,
+    desc: sec.desc,
+    subsections: sec.subsections.map((sub, subIdx) => ({
+      order: subIdx + 1,
+      title: sub.title,
+      desc: sub.desc,
+      items: sub.items.map((it, iIdx) => ({
+        order: iIdx + 1,
+        question_type: it.type,
+        question_text: it.text,
+        is_required: it.required ? "Y" : "N",
+        option_values: isChoiceType(it.type)
+          ? it.options.map((op, k) => ({
+              label: op.label ?? "",
+              value: op.value ?? "",
+              order: op.order ?? k + 1,
+            }))
+          : null,
+      })),
+    })),
+  })),
+}));
+
+// ✅ 저장 함수 (백엔드 연동)
+async function saveDraft() {
+  try {
+    const res = await axios.post("/api/survey/new", payload.value);
+    if (res.data?.success) {
+      alert("조사지 저장 완료!");
+      router.push("/survey");
+    } else {
+      alert("저장 실패");
+    }
+  } catch (e) {
+    console.error("save error:", e);
+    alert("서버 오류: " + (e.response?.data?.message || e.message));
+  }
+}
+
+function goBack() {
+  router.push("/survey");
 }
 </script>
 
 <template>
-  <section class="p-6">
-    <h2 class="text-2xl font-semibold mb-3">새 조사지 작성 (버전 2.0)</h2>
+  <section class="p-6 max-w-5xl mx-auto">
+    <header class="mb-6 flex items-center justify-between">
+      <div>
+        <h2 class="text-2xl font-semibold">새 조사지 작성</h2>
+        <p class="text-sm text-gray-500">항목 → 세부항목 → 질문 → 옵션 순으로 구성해요.</p>
+      </div>
+      <div class="space-x-2">
+        <button class="border px-3 py-2 rounded" @click="goBack">← 목록</button>
+        <button class="border px-3 py-2 rounded bg-black text-white" @click="saveDraft">저장</button>
+      </div>
+    </header>
 
-    <!-- 상단 제어 버튼 -->
-    <div class="mb-4 flex gap-2">
-      <button class="btn" @click="addSection">항목추가</button>
-      <button class="btn" @click="addSubsection">세부항목추가</button>
-      <button class="btn" @click="addItem">질문추가</button>
+    <!-- 비어있을 때 -->
+    <div v-if="sections.length === 0" class="text-center py-16 border rounded mb-6">
+      <div class="text-gray-600 mb-4">아직 항목이 없습니다.</div>
+      <button class="border px-4 py-2 rounded bg-black text-white" @click="addSection">+ 항목 추가</button>
     </div>
 
-    <!-- 동적 폼 -->
-    <div v-for="(s, sIdx) in sections" :key="sIdx" class="blk">
-      <div class="row">
-        <b>섹션 {{ s.order }}</b>
-        <button class="minus" @click="removeSection(sIdx)">-</button>
-      </div>
-      <div class="grid2">
-        <label
-          >제목 <input v-model="s.title" class="inp" placeholder="섹션 제목"
-        /></label>
-        <label
-          >설명 <input v-model="s.desc" class="inp" placeholder="섹션 설명"
-        /></label>
-      </div>
-
-      <div v-for="(ss, ssIdx) in s.subsections" :key="ssIdx" class="blk2">
-        <div class="row">
-          <span>세부항목 {{ ss.order }}</span>
-          <button class="minus" @click="removeSubsection(sIdx, ssIdx)">
-            -
-          </button>
-        </div>
-        <div class="grid2">
-          <label
-            >제목
-            <input v-model="ss.title" class="inp" placeholder="세부항목 제목"
-          /></label>
-          <label
-            >설명
-            <input v-model="ss.desc" class="inp" placeholder="세부항목 설명"
-          /></label>
-        </div>
-
-        <div v-for="(it, iIdx) in ss.items" :key="iIdx" class="blk3">
-          <div class="row">
-            <span>질문 {{ it.order }}</span>
-            <button class="minus" @click="removeItem(sIdx, ssIdx, iIdx)">
-              -
-            </button>
-          </div>
-          <div class="grid3">
-            <label
-              >유형
-              <select v-model="it.type" class="inp">
-                <option>TEXT</option>
-                <option>RADIO</option>
-                <option>CHECKBOX</option>
-                <option>TEXTAREA</option>
-              </select>
-            </label>
-            <label
-              >필수
-              <select v-model="it.required" class="inp">
-                <option value="Y">Y</option>
-                <option value="N">N</option>
-              </select>
-            </label>
-            <label class="colspan2"
-              >질문문구
-              <input
-                v-model="it.text"
-                class="inp"
-                placeholder="질문을 입력하세요"
-              />
-            </label>
+    <!-- 섹션 -->
+    <div v-else class="space-y-6">
+      <div v-for="(sec, sIndex) in sections" :key="sec.id" class="border rounded p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-semibold">항목 #{{ sIndex + 1 }}</h3>
+          <div class="space-x-2">
+            <button class="border px-3 py-1 rounded" @click="addSubsection(sIndex)">세부항목 추가</button>
+            <button class="border px-3 py-1 rounded" @click="removeSection(sIndex)">-</button>
           </div>
         </div>
-      </div>
-    </div>
 
-    <div class="mt-4 text-right">
-      <router-link to="/survey" class="btn ghost">취소</router-link>
-      <button class="btn" :disabled="saving" @click="submitAll">
-        {{ saving ? "저장 중…" : "작성완료" }}
-      </button>
+        <div class="grid md:grid-cols-2 gap-3 mb-3">
+          <div>
+            <label class="block text-sm mb-1">항목 제목</label>
+            <input v-model="sec.title" class="border px-3 py-2 rounded w-full" />
+          </div>
+          <div>
+            <label class="block text-sm mb-1">항목 설명</label>
+            <input v-model="sec.desc" class="border px-3 py-2 rounded w-full" />
+          </div>
+        </div>
+
+        <div class="space-y-4">
+          <div v-for="(sub, subIndex) in sec.subsections" :key="sub.id" class="border rounded p-3">
+            <div class="flex items-center justify-between mb-2">
+              <div class="font-medium">세부항목 #{{ subIndex + 1 }}</div>
+              <div class="space-x-2">
+                <button class="border px-3 py-1 rounded" @click="addItem(sIndex, subIndex)">질문 추가</button>
+                <button class="border px-3 py-1 rounded" @click="removeSubsection(sIndex, subIndex)">-</button>
+              </div>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-3 mb-3">
+              <div>
+                <label class="block text-sm mb-1">세부항목 제목</label>
+                <input v-model="sub.title" class="border px-3 py-2 rounded w-full" />
+              </div>
+              <div>
+                <label class="block text-sm mb-1">세부항목 설명</label>
+                <input v-model="sub.desc" class="border px-3 py-2 rounded w-full" />
+              </div>
+            </div>
+
+            <!-- 질문 -->
+            <div class="space-y-3">
+              <div v-for="(it, iIndex) in sub.items" :key="it.id" class="border rounded p-3">
+                <div class="flex items-center justify-between mb-2">
+                  <div class="font-medium">질문 #{{ iIndex + 1 }}</div>
+                  <button class="border px-3 py-1 rounded" @click="removeItem(sIndex, subIndex, iIndex)">-</button>
+                </div>
+
+                <div class="grid md:grid-cols-3 gap-3">
+                  <div>
+                    <label class="block text-sm mb-1">질문 타입</label>
+                    <select v-model="it.type" class="border px-3 py-2 rounded w-full" @change="onChangeType(it)">
+                      <option value="TEXT">TEXT (단답)</option>
+                      <option value="TEXTAREA">TEXTAREA (서술)</option>
+                      <option value="RADIO">RADIO (단일)</option>
+                      <option value="CHECKBOX">CHECKBOX (다중)</option>
+                    </select>
+                  </div>
+                  <div class="md:col-span-2">
+                    <label class="block text-sm mb-1">질문 내용</label>
+                    <input v-model="it.text" class="border px-3 py-2 rounded w-full" placeholder="예: 성별을 선택하세요" />
+                  </div>
+                </div>
+
+                <div class="mt-2">
+                  <label class="inline-flex items-center gap-2 text-sm">
+                    <input type="checkbox" v-model="it.required" />
+                    필수 여부
+                  </label>
+                </div>
+
+                <!-- 옵션 -->
+                <div v-if="isChoiceType(it.type)" class="mt-4 border-t pt-3">
+                  <div class="flex items-center justify-between mb-2">
+                    <div class="text-sm font-medium">옵션 ({{ it.options.length }})</div>
+                    <button class="border px-3 py-1 rounded" @click="addOption(sIndex, subIndex, iIndex)">+ 옵션 추가</button>
+                  </div>
+
+                  <div class="space-y-2">
+                    <div v-for="(op, oIndex) in it.options" :key="op.id" class="grid md:grid-cols-12 gap-2 items-center">
+                      <div class="md:col-span-1 text-xs text-gray-500">#{{ oIndex + 1 }}</div>
+                      <div class="md:col-span-4">
+                        <input v-model="op.label" class="border px-3 py-2 rounded w-full" placeholder="라벨 (예: 남자)" />
+                      </div>
+                      <div class="md:col-span-6">
+                        <input v-model="op.value" class="border px-3 py-2 rounded w-full" placeholder="값 (예: M)" />
+                      </div>
+                      <div class="md:col-span-1 text-right">
+                        <button class="border px-3 py-2 rounded" @click="removeOption(sIndex, subIndex, iIndex, oIndex)">-</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- // 질문 -->
+          </div>
+        </div>
+      </div>
+
+      <!-- 하단 컨트롤 -->
+      <div class="flex items-center justify-between">
+        <button class="border px-4 py-2 rounded" @click="addSection">+ 항목 추가</button>
+        <button class="border px-4 py-2 rounded bg-black text-white" @click="saveDraft">저장</button>
+      </div>
     </div>
   </section>
 </template>
 
 <style scoped>
-.btn {
-  border: 1px solid #222;
-  background: #222;
-  color: #fff;
-  padding: 8px 14px;
-  border-radius: 10px;
-}
-.btn.ghost {
-  background: #fff;
-  color: #222;
-}
-.minus {
-  border: 1px solid #999;
-  background: #fff;
-  color: #222;
-  padding: 2px 8px;
-  border-radius: 8px;
-}
-.blk {
-  border: 1px solid #ddd;
-  border-radius: 12px;
-  padding: 12px;
-  margin-bottom: 12px;
-}
-.blk2 {
-  border: 1px dashed #ccc;
-  border-radius: 10px;
-  padding: 10px;
-  margin: 10px 0 0 0;
-}
-.blk3 {
-  border: 1px dashed #e0e0e0;
-  border-radius: 10px;
-  padding: 10px;
-  margin: 8px 0 0 0;
-}
-.row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-.grid2 {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin-bottom: 8px;
-}
-.grid3 {
-  display: grid;
-  grid-template-columns: 180px 180px 1fr;
-  gap: 10px;
-}
-.colspan2 {
-  grid-column: 1 / span 3;
-}
-.inp {
-  border: 1px solid #bbb;
-  border-radius: 8px;
-  padding: 8px;
-  width: 100%;
+section {
+  color: #111;
 }
 </style>
