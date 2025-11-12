@@ -143,21 +143,6 @@ module.exports = {
   /* -------------------------------
     특정 템플릿 상세 및 버전 관리
   --------------------------------*/
-  getTemplateVerByCode: `
-    SELECT
-      stv.template_ver_code,
-      stv.template_code,
-      stv.version_detail_no,
-      st.version_no,
-      st.status,
-      st.created_at
-    FROM survey_template_ver stv
-    JOIN survey_template st
-      ON st.template_code = stv.template_code
-    WHERE stv.template_code = ?
-    ORDER BY stv.template_ver_code DESC
-    LIMIT 1
-  `,
 
   getNextDetailVersion: `
     SELECT
@@ -276,4 +261,28 @@ module.exports = {
   updateSubmissionUpdatedAt: `
   UPDATE survey_submission SET updated_at = ? WHERE submit_code = ?
 `,
+
+// 모든 현재버전 비활성화 (새 메이저 템플릿 생성 시 사용)
+deactivateAllCurrentVersions: `
+  UPDATE survey_template_ver
+  SET is_current = 'N', effective_to = NOW()
+  WHERE is_current = 'Y'
+`,
+
+// 특정 세부버전(template_ver_code)로 헤더 조회 (정확한 버전 고정)
+getTemplateVerByVerCode: `
+  SELECT
+    stv.template_ver_code,
+    stv.template_code,
+    stv.version_detail_no,
+    st.version_no,
+    st.status,
+    st.created_at
+  FROM survey_template_ver stv
+  JOIN survey_template st
+    ON st.template_code = stv.template_code
+  WHERE stv.template_ver_code = ?
+  LIMIT 1
+`,
+
 };

@@ -147,6 +147,13 @@ const routes = [
     component: () => import("../views/AssignManager.vue"),
     props: true,
   },
+  //확인
+  {
+  path: "/survey/detail/ver/:templateVerCode",
+  name: "survey-detail-by-ver",
+  component: () => import("../views/SurveyDetail.vue"),
+  props: true,
+  },
   {
     path: "/event",
     name: "EventList",

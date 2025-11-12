@@ -76,21 +76,6 @@ router.post("/new", async (req, res) => {
 });
 
 /* -------------------------------
-  조사지 버전 상세 (시스템)
---------------------------------*/
-router.get("/detail/:templateCode", async (req, res) => {
-  try {
-    const data = await surveyService.getSurveyDetail(req.params.templateCode);
-    res.json({ success: true, result: toSafeJson(data) });
-  } catch (e) {
-    console.error("[GET /survey/detail/:templateCode]", e);
-    res
-      .status(500)
-      .json({ success: false, message: e.message || "상세 조회 중 오류" });
-  }
-});
-
-/* -------------------------------
   조사지 수정 → 새 세부버전 생성 (시스템)
 --------------------------------*/
 router.post("/update/:templateCode", async (req, res) => {
@@ -166,6 +151,27 @@ router.put("/submission/:submitCode", async (req, res) => {
     res
       .status(500)
       .json({ success: false, message: e.message || "제출본 수정 중 오류" });
+  }
+});
+
+
+/* -------------------------------
+  조사지 버전 상세 (세부버전 코드로 고정 조회)
+--------------------------------*/
+router.get("/detail/ver/:templateVerCode", async (req, res) => {
+  try {
+    const data = await surveyService.getSurveyDetailByVer(req.params.templateVerCode);
+    if (!data) {
+      return res
+        .status(404)
+        .json({ success: false, message: "해당 세부버전을 찾을 수 없습니다." });
+    }
+    res.json({ success: true, result: toSafeJson(data) });
+  } catch (e) {
+    console.error("[GET /survey/detail/ver/:templateVerCode]", e);
+    res
+      .status(500)
+      .json({ success: false, message: e.message || "상세 조회 중 오류" });
   }
 });
 

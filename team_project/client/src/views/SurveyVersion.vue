@@ -21,7 +21,7 @@
           v-for="row in list"
           :key="row.template_ver_code"
           class="cursor-pointer hover:bg-gray-100"
-          @click="goToDetail(row.template_code)"
+          @click="goToDetail(row.template_ver_code)"
         >
           <td class="border p-2">{{ row.template_ver_code }}</td>
           <td class="border p-2">{{ row.template_code }}</td>
@@ -73,7 +73,7 @@ function goToNew() {
   router.push("/survey/new");
 }
 
-function goToDetail(templateCode) {
-  router.push(`/survey/detail/${templateCode}`);
+function goToDetail(templateVerCode) {
+  router.push({ name: "survey-detail-by-ver", params: { templateVerCode } });
 }
 </script>

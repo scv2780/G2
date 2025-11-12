@@ -22,11 +22,6 @@ module.exports = {
     return surveyMapper.insertAnswers(body);
   },
 
-  // 조사지 상세
-  getSurveyDetail(templateCode) {
-    return surveyMapper.getSurveyDetail(templateCode);
-  },
-
   // 조사지 수정 (버전 업데이트)
   updateSurveyVersion(templateCode, data) {
     return surveyMapper.updateSurveyVersion(templateCode, data);
@@ -45,5 +40,9 @@ module.exports = {
   // 제출본 수정
   updateSubmission(submitCode, body) {
     return surveyMapper.updateSubmissionAnswers(Number(submitCode), body);
+  },
+
+  getSurveyDetailByVer(templateVerCode) {
+    return surveyMapper.getSurveyDetailByVer(Number(templateVerCode));
   },
 };

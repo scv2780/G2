@@ -15,7 +15,8 @@
       <h3 class="text-xl font-medium mb-2">
         템플릿 코드: {{ survey.template_code }}
       </h3>
-      <p class="text-gray-600 mb-6">버전번호: {{ survey.version_no }}</p>
+      <p class="text-gray-600 mb-2">메이저 버전: {{ survey.version_no }}</p>
+      <p class="text-gray-600 mb-6">세부 버전: {{ survey.version_detail_no }}</p>
 
       <div
         v-for="(section, sIdx) in survey.sections"
@@ -46,9 +47,7 @@
               <div class="font-medium mb-1">
                 {{ sIdx + 1 }}.{{ subIdx + 1 }}.{{ iIdx + 1 }}
                 {{ item.question_text }}
-                <span v-if="item.is_required === 'Y'" class="text-red-500"
-                  >*</span
-                >
+                <span v-if="item.is_required === 'Y'" class="text-red-500">*</span>
               </div>
               <div class="text-sm text-gray-500">
                 유형: {{ item.question_type }}
@@ -57,9 +56,10 @@
           </ul>
         </div>
       </div>
+
       <button
         class="border px-4 py-2 rounded bg-gray-900 text-white"
-        @click="goEdit"
+        @click="goEdit()"
       >
         수정하기
       </button>
@@ -68,39 +68,47 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, watch, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 
 const route = useRoute();
 const router = useRouter();
 
-const survey = ref(null);
+const templateVerCode = computed(() => route.params.templateVerCode);
+const data = ref(null);
+const survey = computed(() => data.value);   // ★ 템플릿에서 쓰는 별칭
 const loading = ref(false);
 const error = ref(null);
 
-onMounted(async () => {
+async function fetchDetail() {
   loading.value = true;
+  error.value = null;
   try {
-    const { data } = await axios.get(
-      `/api/survey/detail/${route.params.templateCode}`
-    );
-    survey.value = data.result || {};
+    if (!templateVerCode.value) {
+      throw new Error("세부버전 코드가 없습니다.");
+    }
+    const res = await axios.get(`/api/survey/detail/ver/${templateVerCode.value}`);
+    data.value = res.data?.result || null;
+    // console.log("detail", data.value);
   } catch (e) {
-    error.value = e.message || "조사지 불러오기 오류";
+    error.value = e?.message || "상세 조회 중 오류";
+    data.value = null;
   } finally {
     loading.value = false;
   }
-});
+}
 
 function goBack() {
   router.push({ name: "surveyVersion" });
 }
 
-// <script setup> 안에 추가
 function goEdit() {
   if (!survey.value) return;
-  // ⚠️ 라우터 경로의 파라미터 이름과 일치시키기 (예: /survey/edit/:id)
-  router.push(`/survey/edit/${survey.value.template_code}`);
+  // edit 화면은 ver코드로 로딩 → id 자리에 template_ver_code를 넣어줌
+  router.push({ name: "survey-edit", params: { id: survey.value.template_ver_code } });
 }
+
+onMounted(fetchDetail);
+watch(templateVerCode, fetchDetail);
 </script>
