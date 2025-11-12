@@ -1,0 +1,155 @@
+// routes/orgRoute.js
+const express = require("express");
+const router = express.Router();
+const orgService = require("../services/orgService");
+
+// 유틸: '' → null, 날짜 포맷 검증
+const toNull = (v) => (v === "" || v === undefined ? null : v);
+const isDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
+
+// 목록
+router.get("/", async (req, res) => {
+  try {
+    const rows = await orgService.organizationList();
+    console.log(
+      "[GET /api/organization] count:",
+      Array.isArray(rows) ? rows.length : 0
+    );
+    return res.status(200).json({ status: "success", data: rows }); // <-- 프론트가 기대하는 형태
+  } catch (err) {
+    console.error("[GET /api/organization] 실패:", err.stack || err);
+    return res.status(500).json({ status: "error", message: "서버 오류" });
+  }
+});
+
+// 수정
+router.put("/:code", async (req, res) => {
+  try {
+    const org_code = req.params.code;
+    const { org_name, address, org_phone, start_date, end_date, status } =
+      req.body ?? {};
+    if (!org_code)
+      return res
+        .status(400)
+        .json({ status: "error", message: "org_code 누락" });
+    if (!org_name)
+      return res.status(400).json({ status: "error", message: "기관명 누락" });
+    if (!["RUNNING", "END"].includes(status))
+      return res
+        .status(400)
+        .json({ status: "error", message: "status 값 오류" });
+
+    const result = await orgService.organizationUpdate({
+      org_code,
+      org_name,
+      address,
+      org_phone,
+      start_date,
+      end_date,
+      status,
+    });
+
+    if (!result || result.affectedRows === 0)
+      return res.status(404).json({ status: "error", message: "대상 없음" });
+
+    res.status(200).json({ status: "success", updated: result.affectedRows });
+  } catch (err) {
+    console.error("[PUT /api/organization/:code] 실패:", err.stack || err);
+    res.status(500).json({ status: "error", message: "서버 오류" });
+  }
+});
+
+//삭제
+router.delete("/:code", async (req, res) => {
+  try {
+    const org_code = req.params.code;
+    if (!org_code) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "org_code 누락" });
+    }
+
+    const result = await orgService.organizationDelete(org_code);
+    if (!result || result.affectedRows === 0) {
+      return res.status(404).json({ status: "error", message: "대상 없음" });
+    }
+
+    return res
+      .status(200)
+      .json({ status: "success", deleted: result.affectedRows });
+  } catch (err) {
+    console.error("[DELETE /api/organization/:code] 실패:", err.stack || err);
+    return res.status(500).json({ status: "error", message: "서버 오류" });
+  }
+});
+
+//추가
+// routes/orgRoute.js (POST /)
+router.post("/", async (req, res) => {
+  try {
+    // 1) 입력 받기 + 빈문자 → null 치환
+    const raw = req.body ?? {};
+    const org_name = (raw.org_name || "").trim();
+    const address = toNull(raw.address);
+    const org_phone = toNull(raw.org_phone);
+    const start_date = toNull(raw.start_date);
+    const end_date = toNull(raw.end_date);
+    const status = raw.status;
+
+    // 2) 검증 (500 대신 400으로 돌려서 문제를 바로 알 수 있게)
+    if (!org_name) {
+      return res.status(400).json({ status: "error", message: "기관명 누락" });
+    }
+    if (!["RUNNING", "END"].includes(status)) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "status 값 오류(RUNNING/END)" });
+    }
+    if (start_date && !isDate(start_date)) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "start_date는 YYYY-MM-DD 형식" });
+    }
+    if (end_date && !isDate(end_date)) {
+      return res
+        .status(400)
+        .json({ status: "error", message: "end_date는 YYYY-MM-DD 형식" });
+    }
+
+    // 3) 서비스 호출
+    const result = await orgService.organizationInsert({
+      org_name,
+      address,
+      org_phone,
+      start_date,
+      end_date,
+      status,
+    });
+
+    // 디버그 로그 (SQL 문제가 있으면 여기 도달 전 콘솔에 에러가 찍힘)
+    console.log("[POST insert result]", result);
+
+    if (!result || !result.affectedRows) {
+      return res.status(500).json({ status: "error", message: "추가 실패" });
+    }
+
+    // 4) BigInt 안전 직렬화
+    const safe = (x) =>
+      JSON.parse(
+        JSON.stringify(x, (k, v) => (typeof v === "bigint" ? v.toString() : v))
+      );
+
+    return res.status(201).json(
+      safe({
+        status: "success",
+        inserted: result.affectedRows,
+        id: result.insertId ?? null,
+      })
+    );
+  } catch (err) {
+    console.error("[POST /api/organization] 실패:", err.stack || err);
+    return res.status(500).json({ status: "error", message: "서버 오류" });
+  }
+});
+
+module.exports = router;

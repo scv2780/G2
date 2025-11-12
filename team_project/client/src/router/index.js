@@ -1,16 +1,21 @@
+// index.js
 import { createRouter, createWebHistory } from "vue-router";
 import Dashboard from "../views/Dashboard.vue";
 import Tables from "../views/Tables.vue";
 import Billing from "../views/Billing.vue";
-import RTL from "../views/Rtl.vue";
+// import RTL from "../views/Rtl.vue";
 import Notifications from "../views/Notifications.vue";
 import Profile from "../views/Profile.vue";
 import SignIn from "../views/SignIn.vue";
 import SignUp from "../views/SignUp.vue";
 import Test from "../views/Test.vue";
+import Sponsor from "../views/Sponsor/Sponsor.vue";
 import survey from "../views/survey.vue";
 import SurveyNew from "../views/SurveyNew.vue";
 import SurveyWrite from "../views/SurveyWrite.vue";
+import EventList from "../views/EventList.vue";
+import EventForm from "../views/EventForm.vue";
+import organization from "../views/organization.vue";
 
 const routes = [
   {
@@ -24,9 +29,17 @@ const routes = [
     component: Test,
   },
   {
-    path: "/sch",
-    name: "sch",
-    component: Test,
+    path: "/sponsor",
+    name: "Sponsor",
+    component: Sponsor,
+    path: "/organization",
+    name: "organization",
+    component: organization,
+  },
+  {
+    path: "/managerApprovals",
+    name: "ManagerApprovals",
+    component: () => import("../views/ManagerApprovals.vue"),
   },
   {
     path: "/dashboard",
@@ -43,11 +56,11 @@ const routes = [
     name: "Billing",
     component: Billing,
   },
-  {
-    path: "/rtl-page",
-    name: "RTL",
-    component: RTL,
-  },
+  // {
+  //   path: "/rtl-page",
+  //   name: "RTL",
+  //   component: RTL,
+  // },
   {
     path: "/notifications",
     name: "Notifications",
@@ -73,15 +86,25 @@ const routes = [
     name: "survey",
     component: survey,
   },
-  { 
+  {
     path: "/survey/new",
     name: "survey-new",
-    component: SurveyNew
-   },
-   {
+    component: SurveyNew,
+  },
+  {
     path: "/survey/write",
     name: "survey-write",
     component: SurveyWrite,
+  },
+  {
+    path: "/event",
+    name: "EventList",
+    component: EventList,
+  },
+  {
+    path: "/event/add",
+    name: "EventAdd",
+    component: EventForm,
   },
 ];
 
