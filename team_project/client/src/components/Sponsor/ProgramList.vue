@@ -30,8 +30,13 @@
           <option value="단기">단기</option>
           <option value="정기">정기</option>
         </select>
-        <span>금액</span>
-        <input type="number" v-model="amount" class="inputBox" />
+        <!-- <span>금액</span>
+        <input
+          type="text"
+          v-model="amount"
+          class="inputBox"
+          oninput="this.value = this.value.replace(/[^0-9.,]/g, '').replace(/(\..*)\./g, '$1');"
+        /> -->
         <span>승인</span>
         <select name="" id="" v-model="status">
           <option value="" selected>-- 전체 --</option>
@@ -40,6 +45,7 @@
           <option value="승인완료">승인 완료</option>
         </select>
         <button v-on:click="search()">검색</button>
+        <button v-on:click="clear()">조건 초기화</button>
       </div>
       <hr />
       <table border="1" cellpadding="8" cellspacing="0" width="100%">
@@ -55,7 +61,11 @@
           </tr>
         </thead>
         <tbody>
-          <tr v-for="program in sponsorList" :key="program.program_code">
+          <tr
+            v-for="program in sponsorList"
+            @click="selectProgram(program)"
+            :key="program.program_code"
+          >
             <td>{{ program.program_name }}</td>
             <td>{{ program.sponsor_type }}</td>
             <td>{{ program.status }}</td>
@@ -69,12 +79,15 @@
     </div>
   </div>
 </template>
+
+<!-- ============================================================= -->
+
 <script setup>
 import axios from "axios";
 import dateFormat from "@/utils/dateFormat";
 import numberFormat from "@/utils/numberFormat";
 import { ref, onBeforeMount } from "vue";
-const emit = defineEmits(["go-to-add"]);
+const emit = defineEmits(["go-to-add", "selectProgram"]);
 let startDate = ref("");
 let endDate = ref("");
 let programCode = ref(""); // 프로그램 Select의 값
@@ -95,7 +108,9 @@ const getSponsorList = async (params = {}) => {
 onBeforeMount(() => {
   getSponsorList();
 });
-
+defineExpose({
+  getSponsorList,
+});
 const search = () => {
   const searchParams = {
     startDate: startDate.value,
@@ -107,14 +122,50 @@ const search = () => {
   };
 
   // getSponsorList 함수를 검색 파라미터와 함께 호출
-  // getSponsorList(searchParams);
+  getSponsorList(searchParams);
   console.log(searchParams);
 };
 
 const programAdd = () => {
   emit("go-to-add"); // 'go-to-add' 이벤트를 발생시킴
 };
+
+const clear = () => {
+  startDate.value = "";
+  endDate.value = "";
+  programCode.value = "";
+  sponsorType.value = "";
+  amount.value = null;
+  status.value = "";
+  getSponsorList(); // 전체 리스트 다시 조회
+};
+
+const selectProgram = async (program) => {
+  // async 함수로 변경
+  console.log("선택된 프로그램:", program);
+
+  // 1. 단건 조회 API 호출
+  // 단건 조회 API 경로가 /api/sponsor/:no 형태라고 가정하고 호출합니다.
+  let result;
+  try {
+    result = await axios.get(`/api/sponsor/${program.program_code}`);
+  } catch (err) {
+    console.error("단건 조회 API 호출 실패:", err);
+    alert("프로그램 상세 정보를 불러오는 데 실패했습니다.");
+    return;
+  }
+
+  // 2. 응답 데이터 처리
+  const programDetail = result.data.serviceSponsor[0]; // 보통 단건 조회는 배열의 첫 번째 요소입니다.
+
+  // 3. 상위 컴포넌트로 데이터와 함께 이벤트 발생
+  if (programDetail) {
+    emit("select-program", programDetail); // 'select-program' 이벤트를 상세 데이터와 함께 발생시킵니다.
+  }
+};
 </script>
+
+<!-- ============================================================= -->
 
 <style scoped>
 /* div#search에 Flexbox 적용 */
@@ -169,5 +220,11 @@ const programAdd = () => {
   border: none;
   border-radius: 4px;
   cursor: pointer;
+}
+tbody tr:hover {
+  cursor: pointer;
+  background-color: gray;
+  opacity: 0.5;
+  color: white;
 }
 </style>
