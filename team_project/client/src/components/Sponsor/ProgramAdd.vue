@@ -1,180 +1,361 @@
 <template>
   <div class="p-6">
     <div id="container">
-      <h2 class="text-xl font-bold mb-2">후원 프로그램 등록</h2>
+      <h2 class="text-xl font-bold mb-2">
+        후원 프로그램 {{ isEditMode ? "수정" : "등록" }}
+      </h2>
       <hr />
-      <label for="program_name">프로그램 명</label>
-      <input
-        type="text"
-        id="program_name"
-        name="program_name"
-        v-model="formData.program_name"
-      />
-      <label for="program_type">후원유형</label>
-      <select
-        id="program_type"
-        name="program_type"
-        v-model="formData.sponsor_type"
-      >
-        <option value="단기">단기</option>
-        <option value="정기" disabled>정기</option>
-      </select>
-      <label for="program_status">상태</label>
-      <select
-        id="program_status"
-        name="program_status"
-        v-model="formData.status"
-      >
-        <option value="집행전">진행전</option>
-        <option value="집행 중" disabled>진행중</option>
-        <option value="집행 완료" disabled>진행완료</option>
-      </select>
-      <label for="amount_setting">금액 단위 설정</label>
-      <div class="field-container checkbox-group">
-        지정
-        <input
-          type="radio"
-          name="unit"
-          id="amount_fixed"
-          value="지정"
-          v-model="amountSettingType"
-        />
-        자율
-        <input
-          type="radio"
-          name="unit"
-          id="amount_free"
-          value="자율"
-          v-model="amountSettingType"
-        />
-        <button type="button" class="add-button" @click="addUnitInput">
-          단위 추가 +
-        </button>
-      </div>
-      <template v-for="unit in amountUnits" :key="unit.id">
-        <label :for="`unit-${unit.id}`"></label>
-        <div class="field-container dynamic-unit-input">
+      <div class="form-field-group">
+        <label for="program_name">프로그램 명</label>
+        <div class="field-container">
           <input
             type="text"
-            inputmode="numeric"
-            :id="`unit-${unit.id}`"
-            :value="numberFormat(unit.value)"
-            @input="formatUnitInput(unit, $event)"
-            placeholder="금액 단위를 입력하세요 (예: 10,000)"
+            id="program_name"
+            name="program_name"
+            v-model="formData.program_name"
           />
+        </div>
+
+        <label for="program_type">후원유형</label>
+        <div class="field-container">
+          <select
+            id="program_type"
+            name="program_type"
+            v-model="formData.sponsor_type"
+          >
+            <option value="단기">단기</option>
+            <option value="정기" disabled>정기</option>
+          </select>
+        </div>
+
+        <label for="program_status">상태</label>
+        <div class="field-container">
+          <select
+            id="program_status"
+            name="program_status"
+            v-model="formData.status"
+          >
+            <option value="집행전">진행전</option>
+            <option value="집행 중" :disabled="!isEditMode">진행중</option>
+            <option value="집행 완료" :disabled="!isEditMode">진행완료</option>
+          </select>
+        </div>
+
+        <label for="startDate">시작일</label>
+        <div class="field-container">
+          <input
+            type="date"
+            name="startDate"
+            id="startDate"
+            v-model="formData.start_date"
+          />
+        </div>
+
+        <label for="endDate">종료일</label>
+        <div class="field-container">
+          <input
+            type="date"
+            name="endDate"
+            id="endDate"
+            v-model="formData.end_date"
+          />
+        </div>
+        <label for="amount_setting">금액 단위 설정</label>
+        <div class="field-container checkbox-group">
           <button
             type="button"
-            class="remove-button"
-            @click="removeUnitInput(unit.id)"
-            v-if="amountUnits.length >= 0"
+            class="add-button"
+            @click="addUnitInput"
+            v-show="amountSettingType === '지정'"
           >
-            삭제
+            단위 추가 +
           </button>
         </div>
-      </template>
-      <label for="amout">목표 금액</label>
-      <input
-        type="text"
-        id="amout"
-        name="amout"
-        v-model="formattedGoalAmount"
-        inputmode="numeric"
-      />
-      <label for="">승인</label>
-      <select v-model="formData.approval_status">
-        <option value="승인전">승인전</option>
-        <option value="승인요청" disabled>승인 요청</option>
-        <option value="심사중" disabled>심사중</option>
-        <option value="승인 완료" disabled>승인 완료</option>
-      </select>
-      첨부파일 <input type="file" />
+
+        <template v-if="amountSettingType === '지정'">
+          <template v-for="unit in amountUnits" :key="unit.id">
+            <label></label>
+            <div class="field-container dynamic-unit-input">
+              <input
+                type="text"
+                inputmode="numeric"
+                :id="`unit-${unit.id}`"
+                :value="numberFormat(unit.value)"
+                @input="formatUnitInput(unit, $event)"
+                placeholder="금액 단위를 입력하세요 (예: 10,000)"
+                oninput="this.value = this.value.replace(/[^0-9.,]/g, '').replace(/(\..*)\./g, '$1');"
+              />
+              <button
+                type="button"
+                class="remove-button"
+                @click="removeUnitInput(unit.id)"
+              >
+                삭제
+              </button>
+            </div>
+          </template>
+        </template>
+
+        <label for="amout">목표 금액</label>
+        <div class="field-container">
+          <input
+            type="text"
+            id="amout"
+            name="amout"
+            v-model="formattedGoalAmount"
+            inputmode="numeric"
+            oninput="this.value = this.value.replace(/[^0-9.,]/g, '').replace(/(\..*)\./g, '$1');"
+          />
+        </div>
+
+        <label for="">승인</label>
+        <div class="field-container">
+          <select v-model="formData.approval_status">
+            <option value="승인전">승인전</option>
+            <option value="승인요청" :disabled="!isEditMode">승인 요청</option>
+            <option value="심사중" :disabled="!isEditMode">심사중</option>
+            <option value="승인 완료" :disabled="!isEditMode">승인 완료</option>
+          </select>
+        </div>
+
+        <label>첨부파일</label>
+        <div class="field-container">
+          <input type="file" />
+        </div>
+      </div>
+
       <div class="button-group-footer">
-        <button class="primary-button" v-on:click="programAdd()">등록</button>
+        <button class="primary-button" v-on:click="programAdd()">
+          {{ isEditMode ? "수정" : "등록" }}
+        </button>
         <button class="secondary-button" v-on:click="goList()">닫기</button>
       </div>
     </div>
   </div>
 </template>
+
 <script setup>
-import { ref, computed } from "vue";
-import numberFormat from "@/utils/numberFormat";
+import axios from "axios";
+import { ref, computed, watch, defineProps, defineEmits } from "vue";
+// import numberFormat from "@/utils/numberFormat"; // 실제 파일 경로에 맞게 주석 해제
+
+const props = defineProps({
+  initialProgram: {
+    type: Object,
+    default: null,
+  },
+});
 const emit = defineEmits(["goToList"]);
 
-// 폼 데이터를 관리할 반응형 객체 (ref) 정의
+// ----------------------------------------------------
+// 상태 및 헬퍼 함수
+// ----------------------------------------------------
+const isEditMode = ref(false);
+const amountSettingType = ref("지정");
+const amountUnits = ref([]);
+let nextUnitId = 1;
+
 const formData = ref({
+  // DB의 필드명과 일치해야 합니다.
   program_name: "",
   sponsor_type: "단기",
   status: "집행전",
-  amount_fixed: false,
-  amount_free: false,
-  goal_amount: null, // 목표 금액 (숫자형으로 저장)
+  start_date: null,
+  end_date: null,
+  goal_amount: null,
   approval_status: "승인전",
   file_attachment: null,
 });
 
-const goList = () => {
-  emit("goToList"); // 'goToList' 이벤트를 발생시킴
+// 숫자 포맷팅 임시 함수 (실제로는 utils/numberFormat 파일이 필요합니다)
+const numberFormat = (value) => {
+  if (value === null || value === undefined || isNaN(value)) return "";
+  return value.toLocaleString();
 };
-const amountSettingType = ref("지정");
-const amountUnits = ref([]); // 금액 단위를 저장할 반응형 리스트
-let nextUnitId = 1; // ID는 1부터 시작
 
-// 1. 목표 금액을 위한 Computed 속성 정의 (Getter/Setter 사용)
+const goList = () => {
+  emit("goToList");
+};
+
+const resetFormData = () => {
+  formData.value = {
+    program_name: "",
+    sponsor_type: "단기",
+    status: "집행전",
+    start_date: null,
+    end_date: null,
+    goal_amount: null,
+    approval_status: "승인전",
+    file_attachment: null,
+  };
+  amountSettingType.value = "지정";
+  amountUnits.value = [];
+  nextUnitId = 1;
+};
+
+// 금액 단위 데이터를 배열로 변환하는 함수
+const parseDonationUnits = (unitStr) => {
+  if (!unitStr) return [];
+  // 콤마(,)를 기준으로 분리하고, 각 항목을 숫자형으로 변환
+  return unitStr
+    .split(",")
+    .map((val) => {
+      const value = Number(val.trim());
+      return {
+        id: nextUnitId++, // 증가하는 ID 부여
+        value: isNaN(value) ? null : value,
+      };
+    })
+    .filter((unit) => unit.value !== null); // 유효하지 않은 값 제거
+};
+
+// ----------------------------------------------------
+// Props Watcher (수정 모드 진입 로직)
+// ----------------------------------------------------
+watch(
+  () => props.initialProgram,
+  (newVal) => {
+    if (newVal) {
+      //  수정 모드 (데이터 존재)
+      isEditMode.value = true;
+
+      // 폼 데이터 채우기 (날짜 포맷 처리 포함)
+      formData.value.program_name = newVal.program_name;
+      formData.value.sponsor_type = newVal.sponsor_type;
+      formData.value.status = newVal.status;
+      // DB에서 넘어온 날짜 포맷 (YYYY-MM-DDTHH:MM:SS)을 YYYY-MM-DD로 자릅니다.
+      formData.value.start_date = newVal.start_date
+        ? newVal.start_date.slice(0, 10)
+        : null;
+      formData.value.end_date = newVal.end_date
+        ? newVal.end_date.slice(0, 10)
+        : null;
+      formData.value.goal_amount = newVal.goal_amount;
+      formData.value.approval_status = newVal.approval_status;
+
+      // 금액 단위 설정 채우기
+      amountSettingType.value = newVal.donation_type;
+      if (newVal.donation_type === "지정") {
+        nextUnitId = 1; // ID 초기화 후 다시 부여
+        amountUnits.value = parseDonationUnits(newVal.donation_unit);
+      } else {
+        amountUnits.value = [];
+      }
+    } else {
+      //  등록 모드 (데이터 없음)
+      isEditMode.value = false;
+      resetFormData();
+    }
+  },
+  { immediate: true }
+);
+
+// ----------------------------------------------------
+// Computed & 동적 인풋 핸들러
+// ----------------------------------------------------
+// 목표 금액을 위한 Computed 속성 정의 (Getter/Setter 사용)
 const formattedGoalAmount = computed({
   get() {
-    const value = formData.value.goal_amount;
-    // 값이 없으면 빈 문자열 반환
-    if (!value) {
-      return "";
-    }
-    return numberFormat(value);
+    return numberFormat(formData.value.goal_amount);
   },
   set(newValue) {
-    // 콤마 제거 및 숫자만 추출
     const cleanedValue = newValue.toString().replace(/[^0-9]/g, "");
-    // 실제 formData.goal_amount에는 숫자형 값 또는 null을 저장
     formData.value.goal_amount = cleanedValue ? Number(cleanedValue) : null;
   },
 });
 
-// 2. 금액 단위 입력 필드 포매팅을 위한 함수 (동적 인풋용)
+// 금액 단위 입력 필드 포매팅을 위한 함수
 const formatUnitInput = (unit, event) => {
   const inputElement = event.target;
   const rawValue = inputElement.value;
-
-  // 콤마를 포함한 모든 비숫자 문자 제거 (순수 숫자 추출)
   const cleanedValue = rawValue.toString().replace(/[^0-9]/g, "");
 
-  // amountUnits의 실제 값(value)을 순수 숫자형(또는 null)으로 업데이트
   unit.value = cleanedValue ? Number(cleanedValue) : null;
-
-  // 입력 필드에 표시될 값(rawValue)을 포매팅된 문자열로 덮어씌움
   inputElement.value = numberFormat(unit.value);
 };
 
-// 3. '단위 추가' 버튼 클릭 시 실행될 함수
+// '단위 추가' 버튼 클릭 시 실행될 함수
 const addUnitInput = () => {
   if (amountSettingType.value === "지정") {
     amountUnits.value.push({
       id: nextUnitId++,
-      value: null, // 순수 숫자 값을 저장
+      value: null,
     });
   }
 };
 
-// 4. '삭제' 버튼 클릭 시 실행될 함수
+// '삭제' 버튼 클릭 시 실행될 함수
 const removeUnitInput = (id) => {
   amountUnits.value = amountUnits.value.filter((unit) => unit.id !== id);
 };
 
-// 폼 제출 핸들러 (예시)
-const programAdd = () => {
-  console.log("폼 데이터:", formData.value);
-  console.log("목표 금액 (순수 숫자):", formData.value.goal_amount);
-  console.log("금액 단위 (순수 숫자):", amountUnits.value); // 여기에 실제 서버 전송 로직 구현
+// ----------------------------------------------------
+// 최종 제출 로직 (등록/수정)
+// ----------------------------------------------------
+const programAdd = async () => {
+  const actionText = isEditMode.value ? "수정" : "등록";
+
+  // 1. 금액 단위 문자열 생성
+  let donationUnit;
+  if (amountSettingType.value === "지정") {
+    const validUnits = amountUnits.value
+      .map((unit) => unit.value)
+      .filter((value) => value !== null && value > 0);
+    donationUnit = validUnits.length > 0 ? validUnits.join(",") : null;
+  } else {
+    donationUnit = null;
+  }
+
+  // 2. 공통 데이터 객체 생성
+  let obj = {
+    program_name: formData.value.program_name,
+    sponsor_type: formData.value.sponsor_type,
+    status: formData.value.status,
+    start_date: formData.value.start_date,
+    end_date: formData.value.end_date,
+    donation_type: amountSettingType.value,
+    donation_unit: donationUnit,
+    goal_amount: formData.value.goal_amount || 0,
+    approval_status: formData.value.approval_status,
+
+    // 3. 등록/수정에 따라 달라지는 필드 처리
+    program_code: props.initialProgram?.program_code, // 수정 시에만 필요
+    current_amount: props.initialProgram?.current_amount || 0, // 수정 시 기존 값 유지
+    writer: props.initialProgram?.writer || "admin_temp", // 수정 시 기존 값 유지
+    create_date: new Date().toISOString().slice(0, 10), // 등록 시 오늘 날짜
+  };
+
+  console.log(`${actionText}을 위한 최종 데이터 객체:`, obj);
+
+  try {
+    let response;
+    if (isEditMode.value) {
+      //  수정 요청: PUT/PATCH /api/sponsor/:code (백엔드 구현 필요)
+      // 임시로 POST 사용하지만, 백엔드에서 PUT/PATCH로 변경해야 합니다.
+      // URL: /api/sponsor/:code
+      response = await axios.put(`/api/sponsor/${obj.program_code}`, obj);
+    } else {
+      // 등록 요청: POST /api/sponsor
+      response = await axios.post("/api/sponsor", obj);
+    }
+
+    console.log(` 프로그램 ${actionText} 성공:`, response.data);
+    alert(`프로그램이 성공적으로 ${actionText}되었습니다.`);
+    goList();
+  } catch (error) {
+    console.error(`프로그램 ${actionText} 실패:`, error);
+    if (error.response) {
+      alert(
+        `${actionText} 실패: ${error.response.data.message || "서버 오류 발생"}`
+      );
+    } else {
+      alert(`${actionText} 실패: 서버에 연결할 수 없습니다.`);
+    }
+  }
 };
 </script>
 <style scoped>
+/* (스타일 시트 내용은 변경하지 않았습니다.) */
 /* ============================================== */
 /* 1. 컨테이너 & 기본 설정 */
 /* ============================================== */
