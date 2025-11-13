@@ -1,25 +1,87 @@
 // Table : event, sub_event, event_apply, event_result
 
-// 이벤트 전체조회
+// 이벤트 메인페이지
+const selectEventMainpage = `
+  SELECT 
+    e.event_code,
+    e.event_name,
+    e.event_start_date,
+    e.event_end_date,
+    e.recruit_start_date,
+    e.recruit_end_date,
+    e.max_participants,
+    COALESCE(SUM(se.sub_recruit_count), 0) AS total_sub_recruit_count,
+    a.server_filename,
+    a.file_path
+  FROM event e
+  LEFT JOIN sub_event se ON e.event_code = se.event_code
+  LEFT JOIN (
+    SELECT linked_record_pk, MIN(server_filename) AS server_filename, MIN(file_path) AS file_path
+    FROM attachment
+    WHERE linked_table_name = 'event'
+      AND LOWER(SUBSTRING_INDEX(original_filename, '.', -1)) IN ('jpg', 'jpeg', 'png', 'gif')
+    GROUP BY linked_record_pk
+  ) a ON e.event_code = a.linked_record_pk
+  GROUP BY e.event_code
+  ORDER BY e.event_code DESC
+`;
+
+// 이벤트 목록(검색조건)
 const selectEventList = `
-  SELECT event_code
-        ,org_code
-        ,event_type
-        ,user_code
-        ,event_name
-        ,event_content
-        ,event_location
-        ,target_audience
-        ,max_participants
-        ,recruit_start_date
-        ,recruit_end_date
-        ,event_start_date
-        ,event_end_date
-        ,recruit_status
-        ,event_register_date
-        ,register_status
-  FROM event
-  ORDER BY event_code ASC
+  SELECT 
+    e.event_code,
+    e.event_name,
+    e.event_start_date,
+    e.event_end_date,
+    e.recruit_start_date,
+    e.recruit_end_date,
+    e.max_participants,
+    COALESCE(SUM(se.sub_recruit_count), 0) AS total_sub_recruit_count,
+    a.server_filename,
+    a.file_path
+  FROM event e
+  LEFT JOIN sub_event se ON e.event_code = se.event_code
+  LEFT JOIN (
+    SELECT linked_record_pk, MIN(server_filename) AS server_filename, MIN(file_path) AS file_path
+    FROM attachment
+    WHERE linked_table_name = 'event'
+      AND LOWER(SUBSTRING_INDEX(original_filename, '.', -1)) IN ('jpg', 'jpeg', 'png', 'gif')
+    GROUP BY linked_record_pk
+  ) a ON e.event_code = a.linked_record_pk
+  WHERE 1=1
+    -- 모집상태
+    AND (? IS NULL OR e.recruit_status = ?)
+    -- 모집기간
+    AND (? IS NULL OR e.recruit_start_date >= ?)
+    AND (? IS NULL OR e.recruit_end_date <= ?)
+    -- 시행기간
+    AND (? IS NULL OR e.event_start_date >= ?)
+    AND (? IS NULL OR e.event_end_date <= ?)
+    -- 이벤트명
+    AND (? IS NULL OR e.event_name LIKE CONCAT('%', ?, '%'))
+  GROUP BY e.event_code
+  ORDER BY e.event_code DESC
+`;
+
+// 첨부파일 등록
+const insertAttachment = `
+INSERT INTO attachment (
+  original_filename,
+  server_filename,
+  file_path,
+  linked_table_name,
+  linked_record_pk
+) VALUES (?, ?, ?, ?, ?)
+`;
+
+// 매니저 등록
+const insertManager = `
+INSERT INTO manager (
+  manager_category,
+  manager_category_code,
+  manager_type,
+  user_code
+) VALUES (?, ?, ?, ?)
 `;
 
 // 이벤트 단건조회
@@ -106,7 +168,7 @@ INSERT INTO sub_event (
    sub_event_name
   ,sub_event_start_date
   ,sub_event_end_date
-  ,sub_recruit_status
+  ,sub_recruit_count
   ,event_code)
 VALUES ( ?, ?, ?, ?, ? )
 `;
@@ -124,6 +186,7 @@ DELETE FROM sub_event
 WHERE sub_event_code = ?`;
 
 module.exports = {
+  selectEventMainpage,
   selectEventList,
   selectEventOne,
   insertEvent,
@@ -134,4 +197,6 @@ module.exports = {
   insertSubEvent,
   updateSubEvent,
   deleteSubEvent,
+  insertAttachment,
+  insertManager,
 };

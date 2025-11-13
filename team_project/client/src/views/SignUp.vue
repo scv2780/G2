@@ -134,7 +134,7 @@
                     <sign-up-user-form
                       v-else-if="step === 'user'"
                       :base="{ userId, userPw, agree }"
-                      @submit="handleSubmit('individual', $event)"
+                      @submit="signUpSubmit('user', $event)"
                       @back="step = 1"
                     />
 
@@ -142,7 +142,7 @@
                     <sign-up-org-form
                       v-else-if="step === 'org'"
                       :base="{ userId, userPw, agree }"
-                      @submit="handleSubmit('organization', $event)"
+                      @submit="signUpSubmit('org', $event)"
                       @back="step = 1"
                     />
                   </div>
@@ -175,7 +175,11 @@ const body = document.getElementsByTagName('body')[0];
 import { mapMutations } from 'vuex';
 import SignUpUserForm from '@/components/SignUpUserForm.vue';
 import SignUpOrgForm from '@/components/SignUpOrgForm.vue';
-import { checkId as checkUserId } from '../api/user';
+// import { checkId as checkUserId, addUser, addOrg } from '../api/user';
+import { checkId as checkUserId, addUser } from '../api/user';
+import dateFormat from '../utils/dateFormat';
+
+const today = dateFormat(new Date(), 'yyyy-MM-dd');
 
 export default {
   name: 'sign-up',
@@ -194,7 +198,15 @@ export default {
       userPw: '',
       pwCheck: '',
       agree: false,
+      idChecked: false, // 중복 확인 여부
+      idAvailable: false, // ← 사용 가능 여부
     };
+  },
+  watch: {
+    userId() {
+      this.idChecked = false;
+      this.idAvailable = false;
+    },
   },
   beforeMount() {
     this.toggleEveryDisplay();
@@ -217,11 +229,13 @@ export default {
       }
       try {
         const result = await checkUserId(this.userId);
-
+        this.idChecked = true;
         // ok -> 사용 가능한지 체크
         if (result.ok) {
+          this.idAvailable = true;
           alert('사용 가능');
         } else {
+          this.idAvailable = false;
           alert('이미 사용중인 아이디');
         }
       } catch (err) {
@@ -230,18 +244,75 @@ export default {
     },
 
     goToStep(type) {
-      // if (!this.userId || !this.userPw) {
-      //   return alert('입력된 아이디와 비밀번호가 없음.');
-      // }
-      // if (this.userPw !== this.pwCheck) {
-      //   return alert('비밀번호가 불일치.');
-      // }
+      // 중복확인 검사
+      if (!this.idChecked) {
+        return alert('아이디 중복확인 ㄱㄱ');
+      }
+      if (!this.idAvailable) {
+        return alert('사용할 수 없는 아이디');
+      }
+      if (!this.userId || !this.userPw) {
+        return alert('입력된 아이디와 비밀번호가 없음.');
+      }
+      if (this.userPw !== this.pwCheck) {
+        return alert('비밀번호가 불일치.');
+      }
       if (!this.agree) {
         return alert('이용약관 동의 ㄱㄱ');
       }
 
       alert('다음 페이지로 이동합니다');
       this.step = type; // user / org
+    },
+
+    async signUpSubmit(type, detail) {
+      // 개인 회원
+      if (type == 'user') {
+        try {
+          const payload = {
+            userId: this.userId,
+            userPw: this.userPw,
+            agree: this.agree,
+            joinDate: today,
+            ...detail,
+          };
+
+          const result = await addUser(payload);
+
+          if (result.ok) {
+            alert('회원가입 성공. 로그인 페이지로 이동');
+            this.$router.push({ name: 'SignIn' });
+          } else {
+            alert('회원가입 실패 : ', result.message);
+          }
+        } catch (err) {
+          alert('회원가입 오류 발생');
+        }
+      }
+      // 기관 회원
+      if (type == 'org') {
+        try {
+          const payload = {
+            userId: this.userId,
+            userPw: this.userPw,
+            agree: this.agree,
+            joinDate: today,
+            ...detail,
+          };
+
+          console.log(payload);
+          // const result = await addOrg(payload);
+
+          // if (result.ok) {
+          //   alert('회원가입 성공. 로그인 페이지로 이동');
+          //   this.$router.push({ name: 'SignIn' });
+          // } else {
+          //   alert('기관 회원가입 실패: ' + result.message);
+          // }
+        } catch (err) {
+          alert('기관 회원가입 중 오류 발생');
+        }
+      }
     },
   },
 };

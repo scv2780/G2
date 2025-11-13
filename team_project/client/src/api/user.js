@@ -12,11 +12,23 @@ export async function checkId(id) {
 }
 
 // 회원가입 -> 개인 회원
-// export async function registerUser(userData) {
-//   try {
+export async function addUser(userData) {
+  try {
+    const res = await axios.post('/api/user/addUser', userData);
+    return res.data;
+  } catch (error) {
+    console.log('[ user.js 회원가입 실패 ]', error);
+    throw error;
+  }
+}
 
-//   } catch (error) {
-//     console.log('회원가입 실패', error)
-//     throw error;
-//   }
-// }
+// 회원가입 -> 기관 회원
+export async function addOrg(orgData) {
+  try {
+    const res = await axios.post('/api/user/addOrg', orgData);
+    return res.data;
+  } catch (error) {
+    console.log('[ user.js 회원가입 실패 ]', error);
+    throw error;
+  }
+}

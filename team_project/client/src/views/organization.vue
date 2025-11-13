@@ -2,9 +2,9 @@
 <template>
   <div class="org-page">
     <!-- 상단 툴바 -->
-    <div class="toolbar">
-      <div class="filters">
-        <select v-model="searchType" class="select">
+    <div class="org-toolbar">
+      <div class="org-filters">
+        <select v-model="searchType" class="org-select">
           <option value="name">기관명</option>
           <option value="code">기관번호</option>
           <option value="address">주소</option>
@@ -13,56 +13,60 @@
 
         <input
           v-model.trim="keyword"
-          class="input"
+          class="org-input"
           type="text"
           placeholder="검색어를 입력하세요"
           @keyup.enter="onSearch"
         />
 
-        <select v-model="sortType" class="select">
+        <select v-model="sortType" class="org-select">
           <option value="recent">최근 등록순</option>
           <option value="nameAsc">이름(가나다)</option>
           <option value="startDesc">시작일 최신</option>
           <option value="endDesc">종료일 최신</option>
         </select>
 
-        <select v-model="statusType" class="select">
+        <select v-model="statusType" class="org-select">
           <option value="ALL">전체</option>
-          <option value="RUNNING">운영</option>
-          <option value="END">종료</option>
+          <option value="AB1">운영중</option>
+          <option value="AB2">임시중단</option>
+          <option value="AB3">종료</option>
         </select>
       </div>
 
-      <button class="btn primary" @click="openAdd">추가</button>
+      <button class="org-btn org-btn-primary" @click="openAdd">추가</button>
     </div>
 
     <!-- 목록 -->
-    <div v-if="paged.length === 0" class="empty">데이터가 없습니다.</div>
+    <div v-if="paged.length === 0" class="org-empty">데이터가 없습니다.</div>
     <ul v-else class="org-list">
       <li v-for="org in paged" :key="org.id" class="org-item">
         <div class="org-main">
           <div class="org-title">
-            <strong>{{ org.code }}</strong>
-            <span class="sep">|</span>
+            <strong class="org-code">{{ org.code }}</strong>
+            <span class="org-sep">|</span>
             <strong>{{ org.name }}</strong>
-            <span
-              class="badge"
-              :class="org.status === 'RUNNING' ? 'green' : 'gray'"
-            >
-              {{ org.status === "RUNNING" ? "운영" : "종료" }}
+            <span class="org-badge" :class="getStatusMeta(org.status).class">
+              {{ getStatusMeta(org.status).label }}
             </span>
           </div>
           <div class="org-sub">
-            {{ org.address }} | {{ org.phone }} |
-            {{ fmtDate(org.startDate) }} 시작 |
-            {{ org.endDate ? fmtDate(org.endDate) : "-" }} 종료 | 운영여부:
-            {{ org.status === "RUNNING" ? "운영" : "종료" }}
+            {{ org.address }} · {{ org.phone }} ·
+            {{ fmtDate(org.startDate) }} 시작 ·
+            {{ org.endDate ? fmtDate(org.endDate) : "-" }} 종료
           </div>
         </div>
 
         <div class="org-actions">
-          <button class="btn" @click.stop="openEdit(org)">수정</button>
-          <button class="btn danger" @click="remove(org)">삭제</button>
+          <button class="org-btn org-btn-xs" @click.stop="openEdit(org)">
+            수정
+          </button>
+          <button
+            class="org-btn org-btn-xs org-btn-danger"
+            @click="remove(org)"
+          >
+            삭제
+          </button>
         </div>
       </li>
     </ul>
@@ -75,46 +79,49 @@
         @click.self="closeModal"
       >
         <div class="org-modal" @click.stop>
-          <h3>기관 정보 수정</h3>
+          <h3 class="org-modal-title">기관 정보 수정</h3>
 
-          <div class="grid">
+          <div class="org-form-grid">
             <label>기관명</label>
             <input
-              class="input"
+              class="org-input"
               v-model.trim="form.name"
               placeholder="기관명"
             />
 
             <label>주소</label>
             <input
-              class="input"
+              class="org-input"
               v-model.trim="form.address"
               placeholder="주소"
             />
 
             <label>연락처</label>
             <input
-              class="input"
+              class="org-input"
               v-model.trim="form.phone"
               placeholder="연락처"
             />
 
             <label>시작일자</label>
-            <input class="input" type="date" v-model="form.startDate" />
+            <input class="org-input" type="date" v-model="form.startDate" />
 
             <label>종료일자</label>
-            <input class="input" type="date" v-model="form.endDate" />
+            <input class="org-input" type="date" v-model="form.endDate" />
 
             <label>운영여부</label>
-            <select class="select" v-model="form.status">
-              <option value="RUNNING">운영</option>
-              <option value="END">종료</option>
+            <select class="org-select" v-model="form.status">
+              <option value="AB1">운영중</option>
+              <option value="AB2">임시중단</option>
+              <option value="AB3">종료</option>
             </select>
           </div>
 
-          <div class="modal-actions">
-            <button class="btn" @click="closeModal">취소</button>
-            <button class="btn primary" @click="onModalSave">저장</button>
+          <div class="org-modal-actions">
+            <button class="org-btn" @click="closeModal">취소</button>
+            <button class="org-btn org-btn-primary" @click="onModalSave">
+              저장
+            </button>
           </div>
         </div>
       </div>
@@ -124,46 +131,49 @@
     <teleport to="body">
       <div v-if="isAddOpen" class="org-modal-backdrop" @click.self="closeAdd">
         <div class="org-modal" @click.stop>
-          <h3>기관 추가</h3>
+          <h3 class="org-modal-title">기관 추가</h3>
 
-          <div class="grid">
+          <div class="org-form-grid">
             <label>기관명</label>
             <input
-              class="input"
+              class="org-input"
               v-model.trim="addForm.name"
               placeholder="기관명"
             />
 
             <label>주소</label>
             <input
-              class="input"
+              class="org-input"
               v-model.trim="addForm.address"
               placeholder="주소"
             />
 
             <label>연락처</label>
             <input
-              class="input"
+              class="org-input"
               v-model.trim="addForm.phone"
               placeholder="연락처"
             />
 
             <label>시작일자</label>
-            <input class="input" type="date" v-model="addForm.startDate" />
+            <input class="org-input" type="date" v-model="addForm.startDate" />
 
             <label>종료일자</label>
-            <input class="input" type="date" v-model="addForm.endDate" />
+            <input class="org-input" type="date" v-model="addForm.endDate" />
 
             <label>운영여부</label>
-            <select class="select" v-model="addForm.status">
-              <option value="RUNNING">운영</option>
-              <option value="END">종료</option>
+            <select class="org-select" v-model="addForm.status">
+              <option value="AB1">운영중</option>
+              <option value="AB2">임시중단</option>
+              <option value="AB3">종료</option>
             </select>
           </div>
 
-          <div class="modal-actions">
-            <button class="btn" @click="closeAdd">취소</button>
-            <button class="btn primary" @click="onAddSave">추가</button>
+          <div class="org-modal-actions">
+            <button class="org-btn" @click="closeAdd">취소</button>
+            <button class="org-btn org-btn-primary" @click="onAddSave">
+              추가
+            </button>
           </div>
         </div>
       </div>
@@ -179,11 +189,9 @@ import axios from "axios";
 function toDateInput(val) {
   if (!val) return "";
   if (typeof val === "string") {
-    // 'YYYY-MM-DD...' 형식이면 앞 10자리만
-    const s = val.replace(/\./g, "-"); // 혹시 2025.01.02 형태면 '-'로
+    const s = val.replace(/\./g, "-");
     if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
   }
-  // Date 객체나 숫자 타임스탬프가 올 수도 있음
   const d = new Date(val);
   if (Number.isNaN(d.getTime())) return "";
   const yyyy = d.getFullYear();
@@ -199,16 +207,27 @@ const sortType = ref("recent");
 const statusType = ref("ALL");
 const list = ref([]);
 
+/* 상태 메타 정보 */
+const STATUS_META = {
+  AB1: { label: "운영중", class: "org-badge-green" },
+  AB2: { label: "임시중단", class: "org-badge-yellow" }, // 새로 하나 만들자
+  AB3: { label: "종료", class: "org-badge-gray" },
+};
+
+function getStatusMeta(code) {
+  return STATUS_META[code] || { label: "-", class: "org-badge-gray" };
+}
+
 /* 모달 상태 */
 const isModalOpen = ref(false);
 const form = ref({
-  code: "", // 내부 키
+  code: "",
   name: "",
   address: "",
   phone: "",
-  startDate: "", // 'YYYY-MM-DD'
-  endDate: "", // 'YYYY-MM-DD' 또는 ""
-  status: "RUNNING",
+  startDate: "",
+  endDate: "",
+  status: "AB1",
 });
 
 let editingCode = "";
@@ -248,7 +267,7 @@ function openEdit(org) {
     name: org.name ?? "",
     address: org.address ?? "",
     phone: org.phone ?? "",
-    startDate: org.startDate ?? "", // 이미 리스트 매핑에 있음
+    startDate: org.startDate ?? "",
     endDate: org.endDate ?? "",
     status: org.status ?? "RUNNING",
   };
@@ -262,7 +281,7 @@ function closeModal() {
 // 저장(업데이트) 시 날짜 포함해서 전달
 async function onModalSave() {
   if (!form.value.name.trim()) return alert("기관명을 입력하세요.");
-  if (!["RUNNING", "END"].includes(form.value.status))
+  if (!["AB1", "AB2", "AB3"].includes(form.value.status))
     return alert("운영여부가 올바르지 않습니다.");
 
   const payload = {
@@ -279,7 +298,6 @@ async function onModalSave() {
     payload
   );
 
-  // 로컬 갱신
   const i = list.value.findIndex((x) => x.code === editingCode);
   if (i !== -1) {
     list.value[i] = {
@@ -295,15 +313,14 @@ async function onModalSave() {
   closeModal();
 }
 
-//삭제
+// 삭제
 async function remove(org) {
   if (!confirm(`[${org.code}] ${org.name} 을(를) 삭제할까요?`)) return;
   await axios.delete(`/api/organization/${encodeURIComponent(org.code)}`);
-  // 로컬 목록에서 바로 제거
   list.value = list.value.filter((x) => x.code !== org.code);
 }
 
-// 추가 모달 상태
+/* 추가 모달 상태 */
 const isAddOpen = ref(false);
 const addForm = ref({
   name: "",
@@ -311,7 +328,7 @@ const addForm = ref({
   phone: "",
   startDate: "",
   endDate: "",
-  status: "RUNNING",
+  status: "AB1",
 });
 
 function openAdd() {
@@ -321,7 +338,7 @@ function openAdd() {
     phone: "",
     startDate: "",
     endDate: "",
-    status: "RUNNING",
+    status: "AB1",
   };
   isAddOpen.value = true;
 }
@@ -332,7 +349,7 @@ function closeAdd() {
 // 추가 저장
 async function onAddSave() {
   if (!addForm.value.name.trim()) return alert("기관명을 입력하세요.");
-  if (!["RUNNING", "END"].includes(addForm.value.status))
+  if (!["AB1", "AB2", "AB3"].includes(addForm.value.status))
     return alert("운영여부가 올바르지 않습니다.");
 
   const payload = {
@@ -345,7 +362,7 @@ async function onAddSave() {
   };
 
   await axios.post("/api/organization", payload);
-  await load(); // 목록 새로고침
+  await load();
   closeAdd();
 }
 
@@ -394,8 +411,12 @@ const filtered = computed(() => {
 
 const paged = computed(() => filtered.value);
 
-/* 선택: 모달 열릴 때 스크롤 잠금 */
+/* 모달 열릴 때 스크롤 잠금 */
 watch(isModalOpen, (v) => {
+  document.documentElement.style.overflow = v ? "hidden" : "";
+});
+watch(isAddOpen, (v) => {
+  // 추가 모달도 잠금
   document.documentElement.style.overflow = v ? "hidden" : "";
 });
 
@@ -404,142 +425,227 @@ onMounted(load);
 
 <style scoped>
 .org-page {
-  max-width: 980px;
-  margin: 32px auto;
-  padding: 0 12px;
+  max-width: 1100px;
+  margin: 24px auto 40px;
+  padding: 0 16px;
 }
 
-.toolbar {
+/* 상단 툴바 */
+.org-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
   margin-bottom: 16px;
-  flex-wrap: wrap;
 }
 
-.filters {
+.org-filters {
   display: flex;
-  gap: 8px;
   flex-wrap: wrap;
+  gap: 8px;
 }
 
-.input,
-.select {
-  padding: 8px 10px;
-  border: 1px solid #d8d8d8;
+.org-input,
+.org-select {
+  min-width: 170px;
+  padding: 7px 10px;
   border-radius: 8px;
-  min-width: 160px;
+  border: 1px solid #d7dce5;
+  font-size: 13px;
+  background: #ffffff;
   outline: none;
 }
 
-.btn {
-  padding: 8px 12px;
-  border-radius: 8px;
-  border: 1px solid #d0d0d0;
-  background: #fff;
-  cursor: pointer;
+.org-input:focus,
+.org-select:focus {
+  border-color: #7ea6f6;
+  box-shadow: 0 0 0 1px rgba(126, 166, 246, 0.2);
 }
-.btn:hover {
+
+/* 버튼 공통 */
+.org-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border-radius: 8px;
+  border: 1px solid #d2d6e0;
+  background: #ffffff;
+  font-size: 12px;
+  cursor: pointer;
+  transition: 0.12s ease-in-out;
+  white-space: nowrap;
+}
+
+.org-btn:hover {
   filter: brightness(0.98);
 }
-.btn.primary {
-  background: #4f7cff;
-  border-color: #4f7cff;
-  color: #fff;
+
+.org-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
-.btn.danger {
-  background: #ff6666;
-  border-color: #ff6666;
-  color: #fff;
+
+/* 작은 버튼 */
+.org-btn-xs {
+  padding: 4px 9px;
+  font-size: 11px;
+}
+
+/* 버튼 색상 */
+.org-btn-primary {
+  background: #7ea6f6;
+  border-color: #7ea6f6;
+  color: #ffffff;
+}
+
+.org-btn-primary:hover {
+  filter: brightness(0.96);
+}
+
+.org-btn-danger {
+  background: #f76c6c;
+  border-color: #f76c6c;
+  color: #ffffff;
+}
+
+/* 목록 영역 */
+.org-empty {
+  text-align: center;
+  color: #6b7280;
+  padding: 28px 0;
+  font-size: 13px;
 }
 
 .org-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
 
 .org-item {
   display: flex;
   justify-content: space-between;
   gap: 12px;
-  padding: 14px;
+  padding: 12px 14px;
   border-radius: 12px;
-  background: #f8f9fb;
-  border: 1px solid #e8e8e8;
+  background: #ffffff;
+  border: 1px solid #e2e7f0;
+  box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04);
+}
+
+.org-main {
+  flex: 1;
+  min-width: 0;
 }
 
 .org-title {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 16px;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 600;
 }
-.sep {
+
+.org-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+}
+
+.org-sep {
   opacity: 0.35;
 }
+
 .org-sub {
-  margin-top: 6px;
-  color: #666;
-  font-size: 13px;
-}
-
-.badge {
-  padding: 2px 8px;
+  margin-top: 5px;
   font-size: 12px;
-  border-radius: 999px;
-  border: 1px solid #ddd;
-}
-.badge.green {
-  background: #e7f7ec;
-  border-color: #b9e6c3;
-  color: #207a3a;
-}
-.badge.gray {
-  background: #efefef;
-  border-color: #e0e0e0;
-  color: #666;
+  color: #6b7280;
 }
 
+/* 상태 뱃지 */
+.org-badge {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  border: 1px solid transparent;
+}
+
+.org-badge-green {
+  background: #e6fffa;
+  border-color: #a7f3d0;
+  color: #047857;
+}
+
+.org-badge-gray {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #4b5563;
+}
+
+.org-badge-yellow {
+  background: #fef9c3;
+  border-color: #facc15;
+  color: #92400e;
+}
+
+/* 우측 버튼 영역 */
 .org-actions {
   display: flex;
+  flex-direction: column;
   gap: 6px;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: center;
 }
 
-/* ==== 여기서부터 모달 (Bootstrap과 클래스명 충돌 방지) ==== */
+/* 모달 */
 .org-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: rgba(15, 23, 42, 0.45);
   display: grid;
   place-items: center;
-  z-index: 2147483647; /* 최상위 */
+  z-index: 9999;
 }
+
 .org-modal {
-  width: min(680px, 92vw);
-  background: #fff;
+  width: min(640px, 92vw);
+  background: #ffffff;
   border-radius: 14px;
-  padding: 18px;
-  border: 1px solid #e8e8e8;
+  padding: 18px 18px 16px;
+  border: 1px solid #e2e7f0;
+  box-shadow: 0 8px 22px rgba(15, 23, 42, 0.35);
 }
-.grid {
-  margin-top: 12px;
+
+.org-modal-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
+
+/* 폼 그리드 */
+.org-form-grid {
+  margin-top: 6px;
   display: grid;
-  grid-template-columns: 120px 1fr;
-  gap: 10px 12px;
+  grid-template-columns: 120px minmax(0, 1fr);
+  gap: 10px 14px;
+  align-items: center;
 }
-.modal-actions {
+
+.org-form-grid label {
+  font-size: 13px;
+  color: #4b5563;
+}
+
+/* 모달 버튼 영역 */
+.org-modal-actions {
+  margin-top: 16px;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  margin-top: 16px;
-}
-
-.empty {
-  text-align: center;
-  color: #666;
-  padding: 24px 0;
 }
 </style>

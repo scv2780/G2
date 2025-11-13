@@ -3,6 +3,9 @@ const express = require("express");
 const router = express.Router();
 const orgService = require("../services/orgService");
 
+// 공통코드: 기관 상태
+const VALID_STATUS = ["AB1", "AB2", "AB3"]; // AB1:운영중, AB2:임시중단, AB3:종료
+
 // 유틸: '' → null, 날짜 포맷 검증
 const toNull = (v) => (v === "" || v === undefined ? null : v);
 const isDate = (v) => typeof v === "string" && /^\d{4}-\d{2}-\d{2}$/.test(v);
@@ -34,10 +37,11 @@ router.put("/:code", async (req, res) => {
         .json({ status: "error", message: "org_code 누락" });
     if (!org_name)
       return res.status(400).json({ status: "error", message: "기관명 누락" });
-    if (!["RUNNING", "END"].includes(status))
+    if (!VALID_STATUS.includes(status)) {
       return res
         .status(400)
-        .json({ status: "error", message: "status 값 오류" });
+        .json({ status: "error", message: "status 값 오류(AB1/AB2/AB3)" });
+    }
 
     const result = await orgService.organizationUpdate({
       org_code,
@@ -100,10 +104,10 @@ router.post("/", async (req, res) => {
     if (!org_name) {
       return res.status(400).json({ status: "error", message: "기관명 누락" });
     }
-    if (!["RUNNING", "END"].includes(status)) {
+    if (!VALID_STATUS.includes(status)) {
       return res
         .status(400)
-        .json({ status: "error", message: "status 값 오류(RUNNING/END)" });
+        .json({ status: "error", message: "status 값 오류(AB1/AB2/AB3)" });
     }
     if (start_date && !isDate(start_date)) {
       return res

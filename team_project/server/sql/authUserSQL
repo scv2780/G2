@@ -1,3 +1,0 @@
-const FIND_ID = 'SELECT user_id FROM users WHERE user_id = ?';
-
-module.exports = { FIND_ID };
