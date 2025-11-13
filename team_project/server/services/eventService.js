@@ -5,13 +5,27 @@ const eventMapper = require("../mappers/eventMapper");
 // 이벤트 서비스
 // ==========================
 
-// ✅ 이벤트 전체 목록 조회
-async function getEventList() {
+// ✅ 이벤트 메인페이지
+async function getEventMainpage() {
   try {
-    const events = await eventMapper.selectEventList();
+    const events = await eventMapper.selectEventMainpage();
     return events;
   } catch (err) {
-    console.error("[eventService.js || 이벤트 전체조회 실패]", err.message);
+    console.error(
+      "[eventService.js || 이벤트 메인페이지 목록 조회 실패]",
+      err.message
+    );
+    throw err;
+  }
+}
+
+// ✅ 이벤트 목록
+async function getEventList(filters) {
+  try {
+    const events = await eventMapper.selectEventList(filters);
+    return events;
+  } catch (err) {
+    console.error("[eventService.js || 이벤트 목록 조회 실패]", err.message);
     throw err;
   }
 }
@@ -23,6 +37,17 @@ async function getEvent(event_code) {
     return event;
   } catch (err) {
     console.error("[eventService.js || 이벤트 단건조회 실패]", err.message);
+    throw err;
+  }
+}
+
+// 이벤트 + 세부 이벤트 + 첨부파일 + 서브매니저 등록
+async function createEventFull(data) {
+  try {
+    const result = await eventMapper.addEventFull(data);
+    return result;
+  } catch (err) {
+    console.error("[eventService.js || 전체 이벤트 등록 실패]", err.message);
     throw err;
   }
 }
@@ -126,6 +151,7 @@ async function removeSubEvent(sub_event_code) {
 }
 
 module.exports = {
+  getEventMainpage,
   getEventList,
   getEvent,
   createEvent,
@@ -136,4 +162,5 @@ module.exports = {
   createSubEvent,
   modifySubEvent,
   removeSubEvent,
+  createEventFull,
 };

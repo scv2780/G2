@@ -8,13 +8,14 @@ const orgRouter = require("./routes/orgRoute");
 const eventRouter = require("./routes/eventRoute");
 const sponsorRouter = require("./routes/sponsorRoute");
 const approvalRouter = require("./routes/approvalRoute.js");
-const authRouter = require('./routes/authUser');
+const authRouter = require("./routes/authUser");
+const path = require("path");
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(morgan("dev"));
 
 // 라우터
 // app.use('/api', testRouter);
@@ -25,7 +26,8 @@ app.use("/survey", surveyRoute);
 app.use("/organization", orgRouter);
 app.use("/approvals", approvalRouter);
 app.use("/event", eventRouter);
-app.use('/user', authRouter);
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // 첨부파일
+app.use("/user", authRouter);
 
 // const port = process.env.PORT;
 const port = process.env.PORT;
