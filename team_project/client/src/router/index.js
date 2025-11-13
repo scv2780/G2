@@ -10,6 +10,7 @@ import SignIn from "../views/SignIn.vue";
 import SignUp from "../views/SignUp.vue";
 import Test from "../views/Test.vue";
 import Sponsor from "../views/Sponsor/Sponsor.vue";
+import EventMain from "../views/EventMain.vue";
 import EventList from "../views/EventList.vue";
 import EventForm from "../views/EventForm.vue";
 import Organization from "../views/Organization.vue";
@@ -152,11 +153,19 @@ const routes = [
     component: () => import("../views/AssignManager.vue"),
     props: true,
   },
+  // 이벤트 메인페이지
   {
     path: "/event",
+    name: "EventMain",
+    component: EventMain,
+  },
+  // 이벤트 목록
+  {
+    path: "/event/list",
     name: "EventList",
     component: EventList,
   },
+  // 이벤트 등록
   {
     path: "/event/add",
     name: "EventAdd",

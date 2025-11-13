@@ -1,31 +1,33 @@
 // app.js
-const express = require('express');
-const morgan = require('morgan');
-const dotenv = require('dotenv');
-const testRouter = require('./routes/testRoute');
-const surveyRoute = require('./routes/surveyRoute');
-const orgRouter = require('./routes/orgRoute');
-const eventRouter = require('./routes/eventRoute');
-const sponsorRouter = require('./routes/sponsorRoute');
-const approvalRouter = require('./routes/approvalRoute.js');
+const express = require("express");
+const morgan = require("morgan");
+const dotenv = require("dotenv");
+const testRouter = require("./routes/testRoute");
+const surveyRoute = require("./routes/surveyRoute");
+const orgRouter = require("./routes/orgRoute");
+const eventRouter = require("./routes/eventRoute");
+const sponsorRouter = require("./routes/sponsorRoute");
+const approvalRouter = require("./routes/approvalRoute.js");
+const path = require("path");
 const signRouter = require('./routes/signUser');
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(morgan("dev"));
 
 // 라우터
 // app.use('/api', testRouter);
 
-app.use('/test', testRouter);
-app.use('/sponsor', sponsorRouter);
-app.use('/survey', surveyRoute);
-app.use('/organization', orgRouter);
-app.use('/approvals', approvalRouter);
-app.use('/event', eventRouter);
-app.use('/user', signRouter);
+app.use("/test", testRouter);
+app.use("/sponsor", sponsorRouter);
+app.use("/survey", surveyRoute);
+app.use("/organization", orgRouter);
+app.use("/approvals", approvalRouter);
+app.use("/event", eventRouter);
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // 첨부파일
+app.use("/user", authRouter);
 
 // const port = process.env.PORT;
 const port = process.env.PORT;
