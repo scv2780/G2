@@ -4,17 +4,18 @@ const morgan = require("morgan");
 const dotenv = require("dotenv");
 const testRouter = require("./routes/testRoute");
 const surveyRoute = require("./routes/surveyRoute");
+const counselRoute = require("./routes/counselRoute");
 const orgRouter = require("./routes/orgRoute");
 const eventRouter = require("./routes/eventRoute");
 const sponsorRouter = require("./routes/sponsorRoute");
 const approvalRouter = require("./routes/approvalRoute.js");
-const authRouter = require('./routes/authUser');
+const authRouter = require("./routes/authUser");
 
 dotenv.config();
 
 const app = express();
 app.use(express.json());
-app.use(morgan('dev'));
+app.use(morgan("dev"));
 
 // 라우터
 // app.use('/api', testRouter);
@@ -22,10 +23,11 @@ app.use(morgan('dev'));
 app.use("/test", testRouter);
 app.use("/sponsor", sponsorRouter);
 app.use("/survey", surveyRoute);
+app.use("/counsel", counselRoute);
 app.use("/organization", orgRouter);
 app.use("/approvals", approvalRouter);
 app.use("/event", eventRouter);
-app.use('/user', authRouter);
+app.use("/user", authRouter);
 
 // const port = process.env.PORT;
 const port = process.env.PORT;

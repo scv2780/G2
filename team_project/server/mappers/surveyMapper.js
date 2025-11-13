@@ -164,7 +164,6 @@ async function insertSurvey(data) {
   }
 }
 
-
 /* -------------------------------
   3) 최신(활성) 조사지 조회 (트리)
 --------------------------------*/
@@ -236,7 +235,7 @@ async function insertAnswers(body) {
       now, // submit_at
       now, // updated_at
       written_by,
-      "SUBMITTED",
+      "CA1",
       null, // app_at
     ]);
     const submit_code = submission.insertId;
@@ -277,7 +276,7 @@ async function updateSurveyVersion(templateCode, data) {
     data = stripIdsForVersioning(data);
 
     // (정책에 따라) 같은 템플릿 내 기존 Y 내리기
-    await conn.query(sql.updateOldVersionToInactive, [templateCode]);
+    await conn.query(sql.deactivateAllCurrentVersions);
 
     const nextRows = await conn.query(sql.getNextDetailVersion, [templateCode]);
     const nextDetail =
@@ -477,28 +476,39 @@ async function updateSubmissionAnswers(submitCode, body) {
 async function getSurveyDetailByVer(templateVerCode) {
   const conn = await pool.getConnection();
   try {
-    const ver = await conn.query(sql.getTemplateVerByVerCode, [templateVerCode]);
+    const ver = await conn.query(sql.getTemplateVerByVerCode, [
+      templateVerCode,
+    ]);
     if (!ver || ver.length === 0) return null;
 
     const header = ver[0];
 
-    const sections = await conn.query(sql.getSectionsByVer, [header.template_ver_code]);
-    const subsections = await conn.query(sql.getSubsectionsByVer, [header.template_ver_code]);
-    const items = await conn.query(sql.getItemsByVer, [header.template_ver_code]);
+    const sections = await conn.query(sql.getSectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const subsections = await conn.query(sql.getSubsectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const items = await conn.query(sql.getItemsByVer, [
+      header.template_ver_code,
+    ]);
 
-    for (const it of items) it.option_values = normalizeOptions(it.option_values);
+    for (const it of items)
+      it.option_values = normalizeOptions(it.option_values);
 
     const subBySection = new Map();
     for (const s of sections) subBySection.set(s.section_code, []);
     for (const sub of subsections) {
-      if (!subBySection.has(sub.section_code)) subBySection.set(sub.section_code, []);
+      if (!subBySection.has(sub.section_code))
+        subBySection.set(sub.section_code, []);
       subBySection.get(sub.section_code).push({ ...sub, items: [] });
     }
 
     const itemBySub = new Map();
     for (const sub of subsections) itemBySub.set(sub.subsection_code, []);
     for (const it of items) {
-      if (!itemBySub.has(it.subsection_code)) itemBySub.set(it.subsection_code, []);
+      if (!itemBySub.has(it.subsection_code))
+        itemBySub.set(it.subsection_code, []);
       itemBySub.get(it.subsection_code).push(it);
     }
 
@@ -516,7 +526,6 @@ async function getSurveyDetailByVer(templateVerCode) {
     conn.release();
   }
 }
-
 
 module.exports = {
   listTemplates,

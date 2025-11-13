@@ -158,12 +158,6 @@ module.exports = {
     WHERE st.template_code = ?
   `,
 
-  updateOldVersionToInactive: `
-    UPDATE survey_template_ver
-    SET is_current = 'N', effective_to = NOW()
-    WHERE template_code = ? AND is_current = 'Y'
-  `,
-
   /* -------------------------------
     제출본 목록 (역할별)
   --------------------------------*/
@@ -262,15 +256,15 @@ module.exports = {
   UPDATE survey_submission SET updated_at = ? WHERE submit_code = ?
 `,
 
-// 모든 현재버전 비활성화 (새 메이저 템플릿 생성 시 사용)
-deactivateAllCurrentVersions: `
+  // 모든 현재버전 비활성화 (새 메이저 템플릿 생성 시 사용)
+  deactivateAllCurrentVersions: `
   UPDATE survey_template_ver
   SET is_current = 'N', effective_to = NOW()
   WHERE is_current = 'Y'
 `,
 
-// 특정 세부버전(template_ver_code)로 헤더 조회 (정확한 버전 고정)
-getTemplateVerByVerCode: `
+  // 특정 세부버전(template_ver_code)로 헤더 조회 (정확한 버전 고정)
+  getTemplateVerByVerCode: `
   SELECT
     stv.template_ver_code,
     stv.template_code,
@@ -284,5 +278,4 @@ getTemplateVerByVerCode: `
   WHERE stv.template_ver_code = ?
   LIMIT 1
 `,
-
 };
