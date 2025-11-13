@@ -38,16 +38,10 @@
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-semibold">항목 #{{ sIndex + 1 }}</h3>
           <div class="space-x-2">
-            <button
-              class="border px-3 py-1 rounded"
-              @click="addSubsection(sIndex)"
-            >
+            <button class="border px-3 py-1 rounded" @click="addSubsection(sIndex)">
               세부항목 추가
             </button>
-            <button
-              class="border px-3 py-1 rounded"
-              @click="removeSection(sIndex)"
-            >
+            <button class="border px-3 py-1 rounded" @click="removeSection(sIndex)">
               -
             </button>
           </div>
@@ -56,10 +50,7 @@
         <div class="grid md:grid-cols-2 gap-3 mb-3">
           <div>
             <label class="block text-sm mb-1">항목 제목</label>
-            <input
-              v-model="sec.title"
-              class="border px-3 py-2 rounded w-full"
-            />
+            <input v-model="sec.title" class="border px-3 py-2 rounded w-full" />
           </div>
           <div>
             <label class="block text-sm mb-1">항목 설명</label>
@@ -76,10 +67,7 @@
             <div class="flex items-center justify-between mb-2">
               <div class="font-medium">세부항목 #{{ subIndex + 1 }}</div>
               <div class="space-x-2">
-                <button
-                  class="border px-3 py-1 rounded"
-                  @click="addItem(sIndex, subIndex)"
-                >
+                <button class="border px-3 py-1 rounded" @click="addItem(sIndex, subIndex)">
                   질문 추가
                 </button>
                 <button
@@ -94,17 +82,11 @@
             <div class="grid md:grid-cols-2 gap-3 mb-3">
               <div>
                 <label class="block text-sm mb-1">세부항목 제목</label>
-                <input
-                  v-model="sub.title"
-                  class="border px-3 py-2 rounded w-full"
-                />
+                <input v-model="sub.title" class="border px-3 py-2 rounded w-full" />
               </div>
               <div>
                 <label class="block text-sm mb-1">세부항목 설명</label>
-                <input
-                  v-model="sub.desc"
-                  class="border px-3 py-2 rounded w-full"
-                />
+                <input v-model="sub.desc" class="border px-3 py-2 rounded w-full" />
               </div>
             </div>
 
@@ -140,10 +122,7 @@
                   </div>
                   <div class="md:col-span-2">
                     <label class="block text-sm mb-1">질문 내용</label>
-                    <input
-                      v-model="it.text"
-                      class="border px-3 py-2 rounded w-full"
-                    />
+                    <input v-model="it.text" class="border px-3 py-2 rounded w-full" />
                   </div>
                 </div>
 
@@ -192,9 +171,7 @@
                       <div class="md:col-span-1 text-right">
                         <button
                           class="border px-3 py-2 rounded"
-                          @click="
-                            removeOption(sIndex, subIndex, iIndex, oIndex)
-                          "
+                          @click="removeOption(sIndex, subIndex, iIndex, oIndex)"
                         >
                           -
                         </button>
@@ -228,87 +205,60 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 
 const router = useRouter();
 const route = useRoute();
 
-const templateCode = route.params.id; // /survey/edit/:id
+/** 라우트 파라미터: 신규 (:templateVerCode) 또는 구(:id) 둘 다 허용 */
+const templateVerCode = computed(() => route.params.templateVerCode ?? route.params.id);
+
 const loading = ref(false);
 const saving = ref(false);
 const error = ref(null);
 const sections = ref([]);
 
-// id 생성기
-const newId = (() => {
-  let id = 1;
-  return () => id++;
-})();
+/** 저장 시 사용할 메이저 템플릿 코드 (백엔드 응답에서 획득) */
+const templateCodeForUpdate = ref(null);
 
-// 선택형 여부
-const isChoiceType = (t) =>
-  ["RADIO", "CHECKBOX"].includes(String(t).toUpperCase());
+/* ----------------- 유틸 ----------------- */
+const newId = (() => { let id = 1; return () => id++; })();
+const isChoiceType = (t) => ["RADIO", "CHECKBOX"].includes(String(t).toUpperCase());
 
-// CRUD helpers
-function addSection() {
-  sections.value.push({ id: newId(), title: "", desc: "", subsections: [] });
-}
-function removeSection(i) {
-  sections.value.splice(i, 1);
-}
-function addSubsection(sIdx) {
-  sections.value[sIdx].subsections.push({
-    id: newId(),
-    title: "",
-    desc: "",
-    items: [],
-  });
-}
-function removeSubsection(sIdx, subIdx) {
-  sections.value[sIdx].subsections.splice(subIdx, 1);
-}
-function addItem(sIdx, subIdx) {
-  sections.value[sIdx].subsections[subIdx].items.push({
-    id: newId(),
-    type: "TEXT",
-    text: "",
-    required: false,
-    options: [],
-  });
-}
-function removeItem(sIdx, subIdx, iIdx) {
-  sections.value[sIdx].subsections[subIdx].items.splice(iIdx, 1);
-}
+/* ----------------- UI 조작 ----------------- */
+function addSection() { sections.value.push({ id: newId(), title: "", desc: "", subsections: [] }); }
+function removeSection(i) { sections.value.splice(i, 1); }
+function addSubsection(sIdx) { sections.value[sIdx].subsections.push({ id: newId(), title: "", desc: "", items: [] }); }
+function removeSubsection(sIdx, subIdx) { sections.value[sIdx].subsections.splice(subIdx, 1); }
+function addItem(sIdx, subIdx) { sections.value[sIdx].subsections[subIdx].items.push({ id: newId(), type: "TEXT", text: "", required: false, options: [] }); }
+function removeItem(sIdx, subIdx, iIdx) { sections.value[sIdx].subsections[subIdx].items.splice(iIdx, 1); }
 function onChangeType(item) {
   if (isChoiceType(item.type)) {
     if (!Array.isArray(item.options)) item.options = [];
-    if (item.options.length === 0)
-      item.options.push({ id: newId(), label: "", value: "" });
+    if (item.options.length === 0) item.options.push({ id: newId(), label: "", value: "" });
   } else {
     item.options = [];
   }
 }
-function addOption(sIdx, subIdx, iIdx) {
-  sections.value[sIdx].subsections[subIdx].items[iIdx].options.push({
-    id: newId(),
-    label: "",
-    value: "",
-  });
-}
-function removeOption(sIdx, subIdx, iIdx, oIdx) {
-  sections.value[sIdx].subsections[subIdx].items[iIdx].options.splice(oIdx, 1);
-}
+function addOption(sIdx, subIdx, iIdx) { sections.value[sIdx].subsections[subIdx].items[iIdx].options.push({ id: newId(), label: "", value: "" }); }
+function removeOption(sIdx, subIdx, iIdx, oIdx) { sections.value[sIdx].subsections[subIdx].items[iIdx].options.splice(oIdx, 1); }
 
-// 데이터 로드 (원본 → 편집용 draft 구조로 매핑)
+/* ----------------- 데이터 로드 ----------------- */
 onMounted(async () => {
   loading.value = true;
   try {
-    const { data } = await axios.get(`/api/survey/detail/${templateCode}`);
-    const payload = data?.result ?? data; // 통일 응답형식 대응
-    const srcSections = payload.sections || [];
+    if (!templateVerCode.value) throw new Error("세부버전 코드(templateVerCode)가 없습니다.");
 
+    const url = `/api/survey/detail/ver/${templateVerCode.value}`;
+    const { data } = await axios.get(url);
+    const payload = data?.result ?? data;
+
+    // 저장 시 사용할 메이저 템플릿 코드 확보
+    templateCodeForUpdate.value = payload?.template_code ?? null;
+
+    const srcSections = payload.sections || [];
     sections.value = srcSections.map((s) => ({
       id: newId(),
       title: s.section_title ?? "",
@@ -322,10 +272,7 @@ onMounted(async () => {
           type: (it.question_type || "TEXT").toUpperCase(),
           text: it.question_text ?? "",
           required: it.is_required === "Y",
-          options: (Array.isArray(it.option_values)
-            ? it.option_values
-            : []
-          ).map((op, idx) => ({
+          options: (Array.isArray(it.option_values) ? it.option_values : []).map((op, idx) => ({
             id: newId(),
             label: op.label ?? "",
             value: op.value ?? "",
@@ -335,15 +282,20 @@ onMounted(async () => {
       })),
     }));
   } catch (e) {
+    console.error(e);
     error.value = e?.response?.data?.message || e.message || "조사지 로드 실패";
   } finally {
     loading.value = false;
   }
 });
 
-// 저장(새 버전 생성)
+/* ----------------- 저장(새 세부버전) ----------------- */
 async function saveEdit() {
   if (saving.value) return;
+  if (!templateCodeForUpdate.value) {
+    alert("메이저 템플릿 코드가 없습니다. 화면을 새로고침해 주세요.");
+    return;
+  }
   saving.value = true;
   try {
     const payload = {
@@ -377,14 +329,11 @@ async function saveEdit() {
     };
 
     const { data: res } = await axios.post(
-      `/api/survey/update/${templateCode}`,
+      `/api/survey/update/${templateCodeForUpdate.value}`,
       payload
     );
 
-    // ✅ 서버 통일 응답({ success, result, message }) 체크
-    if (!res?.success) {
-      throw new Error(res?.message || "저장 실패");
-    }
+    if (!res?.success) throw new Error(res?.message || "저장 실패");
 
     alert("새 버전으로 저장 완료!");
     router.push({ name: "surveyVersion" });

@@ -106,15 +106,6 @@ const routes = [
     name: "survey-write",
     component: () => import("../views/SurveyWrite.vue"),
   },
-
-  // 조사지 버전 상세
-  {
-    path: "/survey/detail/:templateCode",
-    name: "survey-detail",
-    component: () => import("../views/SurveyDetail.vue"),
-    props: true,
-  },
-
   // 조사지 버전 수정
   {
     path: "/survey/edit/:id",
@@ -151,6 +142,40 @@ const routes = [
     path: "/assign-manager/:submitCode",
     name: "assignManager",
     component: () => import("../views/AssignManager.vue"),
+    props: true,
+  },
+  //조사지 버전 상세보기
+  {
+    path: "/survey/detail/ver/:templateVerCode",
+    name: "survey-detail-by-ver",
+    component: () => import("../views/SurveyDetail.vue"),
+    props: true,
+  },
+  // 상담 목록
+  {
+    path: "/counsel-list",
+    name: "counselList",
+    component: () => import("../views/CounselList.vue"),
+  },
+  // 상담 작성
+  {
+    path: "/counsel/new/:submitCode",
+    name: "counsel-new",
+    component: () => import("../views/CounselNew.vue"),
+    props: true,
+  },
+  //상담 수정
+  {
+    path: "/counsel/edit/:submitCode",
+    name: "counsel-edit",
+    component: () => import("../views/CounselEdit.vue"),
+    props: true,
+  },
+  //상담 상세
+  {
+    path: "/counsel/detail/:submitCode",
+    name: "counsel-detail",
+    component: () => import("../views/CounselDetail.vue"),
     props: true,
   },
   // 이벤트 메인페이지

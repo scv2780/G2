@@ -33,6 +33,35 @@ function safeJSON(v) {
   );
 }
 
+// 수정할 때 ID 제거
+function stripIdsForVersioning(payload) {
+  const copy = JSON.parse(JSON.stringify(payload || {}));
+
+  // 상위도 혹시 모를 키 제거 (서버에서 insert만 하므로 안전)
+  delete copy.template_code;
+  delete copy.template_ver_code;
+
+  if (!Array.isArray(copy.sections)) return copy;
+
+  for (const sec of copy.sections) {
+    if (!sec) continue;
+    delete sec.section_code;
+
+    if (!Array.isArray(sec.subsections)) continue;
+    for (const sub of sec.subsections) {
+      if (!sub) continue;
+      delete sub.subsection_code;
+
+      if (!Array.isArray(sub.items)) continue;
+      for (const it of sub.items) {
+        if (!it) continue;
+        delete it.item_code;
+      }
+    }
+  }
+  return copy;
+}
+
 /* -------------------------------
   1) 조사지 버전 목록
 --------------------------------*/
@@ -56,6 +85,9 @@ async function insertSurvey(data) {
   try {
     await conn.beginTransaction();
 
+    // ✅ 들어오는 데이터에서 모든 *_code 제거 (원본 보호)
+    data = stripIdsForVersioning(data);
+
     const rows = await conn.query(sql.getLatestVersionNo);
     const latest = rows && rows[0];
     const nextVersion = latest?.version_no
@@ -65,6 +97,9 @@ async function insertSurvey(data) {
     const createdBy = data?.template?.created_by ?? 1;
     const createdAt = data?.template?.created_at ?? new Date();
     const status = data?.template?.status ?? "ACTIVE";
+
+    //최신 메이저만 current로 유지하려면 여기서 기존 Y 내리기
+    await conn.query(sql.deactivateAllCurrentVersions);
 
     const tmplRes = await conn.query(sql.insertTemplate, [
       nextVersion,
@@ -76,7 +111,7 @@ async function insertSurvey(data) {
 
     const verRes = await conn.query(sql.insertTemplateVer, [
       template_code,
-      nextVersion, // 세부버전 시작 = 메이저와 동일
+      nextVersion,
       createdAt,
       null,
       "Y",
@@ -85,6 +120,7 @@ async function insertSurvey(data) {
     ]);
     const template_ver_code = verRes.insertId;
 
+    // 섹션/서브섹션/아이템은 모두 새로 INSERT (ID 재사용 금지)
     for (const sec of data?.sections ?? []) {
       const secRes = await conn.query(sql.insertSection, [
         template_ver_code,
@@ -199,7 +235,7 @@ async function insertAnswers(body) {
       now, // submit_at
       now, // updated_at
       written_by,
-      "SUBMITTED",
+      "CA1",
       null, // app_at
     ]);
     const submit_code = submission.insertId;
@@ -229,60 +265,6 @@ async function insertAnswers(body) {
 }
 
 /* -------------------------------
-  5) 특정 조사지 상세 조회 (트리)
---------------------------------*/
-async function getSurveyDetail(templateCode) {
-  const conn = await pool.getConnection();
-  try {
-    const ver = await conn.query(sql.getTemplateVerByCode, [templateCode]);
-    if (!ver || ver.length === 0) return null;
-
-    const header = ver[0];
-    const sections = await conn.query(sql.getSectionsByVer, [
-      header.template_ver_code,
-    ]);
-    const subsections = await conn.query(sql.getSubsectionsByVer, [
-      header.template_ver_code,
-    ]);
-    const items = await conn.query(sql.getItemsByVer, [
-      header.template_ver_code,
-    ]);
-
-    for (const it of items)
-      it.option_values = normalizeOptions(it.option_values);
-
-    const subBySection = new Map();
-    for (const s of sections) subBySection.set(s.section_code, []);
-    for (const sub of subsections) {
-      if (!subBySection.has(sub.section_code))
-        subBySection.set(sub.section_code, []);
-      subBySection.get(sub.section_code).push({ ...sub, items: [] });
-    }
-
-    const itemBySub = new Map();
-    for (const sub of subsections) itemBySub.set(sub.subsection_code, []);
-    for (const it of items) {
-      if (!itemBySub.has(it.subsection_code))
-        itemBySub.set(it.subsection_code, []);
-      itemBySub.get(it.subsection_code).push(it);
-    }
-
-    for (const subs of subBySection.values()) {
-      for (const s of subs) s.items = itemBySub.get(s.subsection_code) || [];
-    }
-
-    const sectionsTree = sections.map((s) => ({
-      ...s,
-      subsections: subBySection.get(s.section_code) || [],
-    }));
-
-    return safeJSON({ ...header, sections: sectionsTree });
-  } finally {
-    conn.release();
-  }
-}
-
-/* -------------------------------
   6) 기존 조사지 수정 → 새 세부버전 생성
 --------------------------------*/
 async function updateSurveyVersion(templateCode, data) {
@@ -290,7 +272,11 @@ async function updateSurveyVersion(templateCode, data) {
   try {
     await conn.beginTransaction();
 
-    await conn.query(sql.updateOldVersionToInactive, [templateCode]);
+    // ✅ 들어오는 데이터에서 모든 *_code 제거 (원본 보호)
+    data = stripIdsForVersioning(data);
+
+    // (정책에 따라) 같은 템플릿 내 기존 Y 내리기
+    await conn.query(sql.deactivateAllCurrentVersions);
 
     const nextRows = await conn.query(sql.getNextDetailVersion, [templateCode]);
     const nextDetail =
@@ -298,39 +284,41 @@ async function updateSurveyVersion(templateCode, data) {
 
     const creator = data?.template?.created_by ?? 1;
     const createdAt = data?.template?.created_at ?? new Date();
+
     const verResult = await conn.query(sql.insertTemplateVer, [
       templateCode,
       nextDetail,
       new Date(),
       null,
-      "Y",
+      "Y", // (과거 메이저 수정 시엔 'N'으로 넣는 정책도 가능—팀 결정)
       creator,
       createdAt,
     ]);
     const template_ver_code = verResult.insertId;
 
+    // 섹션/서브섹션/아이템은 모두 새로 INSERT (ID 재사용 금지)
     for (const sec of data.sections || []) {
       const secRes = await conn.query(sql.insertSection, [
         template_ver_code,
-        sec.title,
-        sec.desc,
+        sec.title ?? "",
+        sec.desc ?? "",
       ]);
       const section_code = secRes.insertId;
 
       for (const sub of sec.subsections || []) {
         const subRes = await conn.query(sql.insertSubsection, [
           section_code,
-          sub.title,
-          sub.desc,
+          sub.title ?? "",
+          sub.desc ?? "",
         ]);
         const subsection_code = subRes.insertId;
 
         for (const item of sub.items || []) {
           await conn.query(sql.insertItem, [
             subsection_code,
-            item.question_type,
-            item.question_text,
-            item.is_required,
+            item.question_type ?? "TEXT",
+            item.question_text ?? "",
+            item.is_required ?? "N",
             item.option_values ? JSON.stringify(item.option_values) : null,
           ]);
         }
@@ -484,14 +472,70 @@ async function updateSubmissionAnswers(submitCode, body) {
   }
 }
 
+// 수정으로 원본 안바뀌게 하려구
+async function getSurveyDetailByVer(templateVerCode) {
+  const conn = await pool.getConnection();
+  try {
+    const ver = await conn.query(sql.getTemplateVerByVerCode, [
+      templateVerCode,
+    ]);
+    if (!ver || ver.length === 0) return null;
+
+    const header = ver[0];
+
+    const sections = await conn.query(sql.getSectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const subsections = await conn.query(sql.getSubsectionsByVer, [
+      header.template_ver_code,
+    ]);
+    const items = await conn.query(sql.getItemsByVer, [
+      header.template_ver_code,
+    ]);
+
+    for (const it of items)
+      it.option_values = normalizeOptions(it.option_values);
+
+    const subBySection = new Map();
+    for (const s of sections) subBySection.set(s.section_code, []);
+    for (const sub of subsections) {
+      if (!subBySection.has(sub.section_code))
+        subBySection.set(sub.section_code, []);
+      subBySection.get(sub.section_code).push({ ...sub, items: [] });
+    }
+
+    const itemBySub = new Map();
+    for (const sub of subsections) itemBySub.set(sub.subsection_code, []);
+    for (const it of items) {
+      if (!itemBySub.has(it.subsection_code))
+        itemBySub.set(it.subsection_code, []);
+      itemBySub.get(it.subsection_code).push(it);
+    }
+
+    for (const subs of subBySection.values()) {
+      for (const s of subs) s.items = itemBySub.get(s.subsection_code) || [];
+    }
+
+    const sectionsTree = sections.map((s) => ({
+      ...s,
+      subsections: subBySection.get(s.section_code) || [],
+    }));
+
+    return safeJSON({ ...header, sections: sectionsTree });
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   listTemplates,
   insertSurvey,
   getLatestSurvey,
   insertAnswers,
-  getSurveyDetail,
+  // getSurveyDetail,
   updateSurveyVersion,
   listSubmissionsByRole,
   getSubmissionDetail,
   updateSubmissionAnswers,
+  getSurveyDetailByVer,
 };

@@ -22,6 +22,7 @@ const pool = mariadb.createPool({
     // error 발생 시 처리함수
     error: console.log,
   },
+  dateStrings: true,
 });
 
 // 연결 테스트
