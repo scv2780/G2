@@ -19,8 +19,8 @@
         type="text"
         label="주민등록번호 앞자리"
         v-model="regFront"
+        @input="regFront = sanitizeNumber($event.target.value, 6)"
         size="lg"
-        maxlength="6"
         class="flex-grow-1"
       />
       <material-input
@@ -28,8 +28,8 @@
         type="password"
         label="주민등록번호 뒷자리"
         v-model="regBack"
+        @input="regBack = sanitizeNumber($event.target.value, 7)"
         size="lg"
-        maxlength="7"
         class="flex-grow-1"
       />
     </div>
@@ -42,6 +42,7 @@
       v-model="phone"
       size="lg"
       class="mb-3"
+      @input="validatePhone"
     />
 
     <!-- 주소 -->
@@ -68,10 +69,10 @@
 
     <!-- 기관명 -->
     <material-input
-      id="orgName"
+      id="org_name"
       type="text"
       label="기관명"
-      v-model="orgName"
+      v-model="org_name"
       size="lg"
       class="mb-3"
     />
@@ -86,15 +87,15 @@
       class="mb-3"
     />
 
-    <!-- 직위 -->
-    <material-input
-      id="position"
-      type="text"
-      label="직위"
-      v-model="position"
-      size="lg"
-      class="mb-3"
-    />
+    <!-- 권한 -->
+    <div class="input-group input-group-outline my-3">
+      <label class="form-label"></label>
+      <select v-model="role" class="form-control">
+        <option disabled value="">권한을 선택하세요</option>
+        <option value="ORG_ADMIN">기관 관리자</option>
+        <option value="ORG_STAFF">기관 직원</option>
+      </select>
+    </div>
 
     <!-- 이메일 -->
     <div class="d-flex align-items-end gap-2 mb-3">
@@ -167,44 +168,75 @@ export default {
       regBack: '',
       phone: '',
       address: '',
-      orgName: '',
+      email: '',
+      org_name: '',
       department: '',
       position: '',
-      email: '',
-      verifyCode: '',
+      role: '',
       emailSent: false,
     };
   },
   methods: {
     searchAddress() {
-      // 📍 Daum 주소검색 API 연동 위치
+      // 주소검색
       alert('주소 검색 기능 준비 중입니다.');
     },
     sendVerification() {
-      if (!this.email) return alert('이메일을 입력하세요.');
+      if (!this.email) {
+        return alert('이메일을 입력하세요.');
+      }
       this.emailSent = true;
       alert('인증번호가 발송되었습니다.');
     },
     verifyEmail() {
-      if (!this.verifyCode) return alert('인증번호를 입력하세요.');
+      if (!this.verifyCode) {
+        return alert('인증번호를 입력하세요.');
+      }
       alert('이메일 인증이 완료되었습니다.');
     },
     submitForm() {
-      if (!this.name || !this.orgName)
+      if (!this.name || !this.org_name) {
         return alert('이름과 기관명을 입력하세요.');
+      }
 
-      const payload = {
+      this.$emit('submit', {
         name: this.name,
-        regNumber: `${this.regFront}-${this.regBack}`,
+        ssn: `${this.regFront}-${this.regBack}`,
         phone: this.phone,
         address: this.address,
-        orgName: this.orgName,
+        email: this.email,
+        org_name: this.org_name,
         department: this.department,
         position: this.position,
-        email: this.email,
-      };
+        role: this.role,
+      });
+    },
+    sanitizeNumber(value, maxLength) {
+      // 숫자만 남기기
+      let onlyNumber = value.replace(/[^0-9]/g, '');
 
-      this.$emit('submit', payload);
+      // 글자수 제한
+      if (onlyNumber.length > maxLength) {
+        onlyNumber = onlyNumber.slice(0, maxLength);
+      }
+
+      return onlyNumber;
+    },
+    validatePhone() {
+      // 하이픈 감지
+      if (this.phone.includes('-')) {
+        alert('- 없이 입력하세요.');
+        this.phone = this.phone.replace(/-/g, '');
+        return;
+      }
+
+      // 숫자만
+      this.phone = this.phone.replace(/[^0-9]/g, '');
+
+      // 11자리 제한
+      if (this.phone.length > 11) {
+        this.phone = this.phone.slice(0, 11);
+      }
     },
   },
 };
