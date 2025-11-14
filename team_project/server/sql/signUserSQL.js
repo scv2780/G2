@@ -11,10 +11,11 @@ const INSERT_USER = `
     phone,
     address,
     email,
+    department, 
     is_active,
     login_fail_count,
     join_date
-  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 const FIND_ORG_CODE = `

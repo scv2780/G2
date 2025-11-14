@@ -175,8 +175,7 @@ const body = document.getElementsByTagName('body')[0];
 import { mapMutations } from 'vuex';
 import SignUpUserForm from '@/components/SignUpUserForm.vue';
 import SignUpOrgForm from '@/components/SignUpOrgForm.vue';
-// import { checkId as checkUserId, addUser, addOrg } from '../api/user';
-import { checkId as checkUserId, addUser } from '../api/user';
+import { checkId as checkUserId, addUser, addOrg } from '../api/user';
 import dateFormat from '../utils/dateFormat';
 
 const today = dateFormat(new Date(), 'yyyy-MM-dd');
@@ -276,7 +275,6 @@ export default {
             joinDate: today,
             ...detail,
           };
-
           const result = await addUser(payload);
 
           if (result.ok) {
@@ -301,14 +299,14 @@ export default {
           };
 
           console.log(payload);
-          // const result = await addOrg(payload);
+          const result = await addOrg(payload);
 
-          // if (result.ok) {
-          //   alert('회원가입 성공. 로그인 페이지로 이동');
-          //   this.$router.push({ name: 'SignIn' });
-          // } else {
-          //   alert('기관 회원가입 실패: ' + result.message);
-          // }
+          if (result.ok) {
+            alert('회원가입 성공. 로그인 페이지로 이동');
+            // this.$router.push({ name: 'SignIn' });
+          } else {
+            alert('기관 회원가입 실패: ' + result.message);
+          }
         } catch (err) {
           alert('기관 회원가입 중 오류 발생');
         }

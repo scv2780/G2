@@ -22,7 +22,7 @@ async function addUser(data) {
       data.org_code || null,
       data.userId,
       data.userPw,
-      'USER', // 개인 or 기관
+      data.role,
       data.name,
       data.ssn,
       data.phone,
@@ -45,7 +45,7 @@ async function addUser(data) {
 // 기관 code 가져오기
 async function findOrgCode(orgName) {
   try {
-    const [rows] = await pool.query(signUserSQL.FIND_ORG_CODE, [orgName]);
+    const rows = await pool.query(signUserSQL.FIND_ORG_CODE, [orgName]);
     if (rows.length == 0) {
       return null;
     }
@@ -69,6 +69,7 @@ async function addOrg(data) {
       data.phone,
       data.address,
       data.email,
+      data.department,
       1, // is_active(승인 여부)
       0, // 로그인 실패 횟수
       data.joinDate, // 가입일

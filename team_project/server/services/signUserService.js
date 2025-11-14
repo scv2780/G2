@@ -17,15 +17,17 @@ async function addOrg(userData) {
   try {
     // 기관명 조회 -> code 가져옴
     const orgCode = await signUserMapper.findOrgCode(userData.org_name);
+
     if (!orgCode) {
       return { ok: false, message: '등록된 기관 없음' };
     }
 
-    // 회원가입
+    // 회원가입;
     const result = await signUserMapper.addOrg({
       ...userData,
       org_code: orgCode,
     });
+
     return result;
   } catch (err) {
     console.error('[ addOrg 오류 ] : ', err);
