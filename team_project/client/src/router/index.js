@@ -47,6 +47,36 @@ const routes = [
     component: () => import("../views/StaffApprovals.vue"),
   },
   {
+    path: "/priorityApprovals",
+    name: "PriorityApprovals",
+    component: () => import("../views/PriorityApproval.vue"),
+  },
+  {
+    path: "/supportPlanApprovals",
+    name: "SupportPlanApprovals",
+    component: () => import("../views/SupportPlanApproval.vue"),
+  },
+  {
+    path: "/supportResultApprovals",
+    name: "SupportResultApprovals",
+    component: () => import("../views/SupportResultApproval.vue"),
+  },
+  {
+    path: "/eventPlanApprovals",
+    name: "EventPlanApprovals",
+    component: () => import("../views/EventPlanApproval.vue"),
+  },
+  {
+    path: "/eventResultApprovals",
+    name: "EventResultApprovals",
+    component: () => import("../views/EventResultApproval.vue"),
+  },
+  {
+    path: "/sponsorshipPlanApprovals",
+    name: "SponsorshipPlanApprovals",
+    component: () => import("../views/SponsorshipPlanApproval.vue"),
+  },
+  {
     path: "/dashboard",
     name: "Dashboard",
     component: Dashboard,
