@@ -2,12 +2,9 @@
   <section class="p-6 max-w-5xl mx-auto relative">
     <!-- 관리자 전용: 우상단 담당자 배정 버튼 -->
     <div v-if="isAdmin" class="absolute right-6 top-6">
-      <button
-        class="border px-3 py-2 rounded bg-gray-900 text-white"
-        @click="goAssignPage"
-      >
+      <MaterialButton color="dark" size="sm" @click="goAssignPage">
         담당자 배정
-      </button>
+      </MaterialButton>
     </div>
 
     <header class="flex justify-between items-center mb-6">
@@ -18,9 +15,9 @@
           <span class="font-medium">{{ submission?.status ?? "-" }}</span>
         </p>
       </div>
-      <button @click="goBack" class="border px-3 py-2 rounded">
+      <MaterialButton color="dark" size="sm" @click="goBack">
         ← 목록으로
-      </button>
+      </MaterialButton>
     </header>
 
     <!-- 로딩/에러 -->
@@ -32,21 +29,25 @@
     <div v-else>
       <div class="mb-5 text-sm text-gray-700">
         <div class="mb-1">
-          <span class="font-medium">템플릿 코드:</span> {{ submission.template_code }}
+          <span class="font-medium">템플릿 코드:</span>
+          {{ submission.template_code }}
         </div>
         <div class="mb-1">
-          <span class="font-medium">버전:</span> {{ submission.version_no }} /
-          {{ submission.version_detail_no }}
+          <span class="font-medium">버전:</span>
+          {{ submission.version_no }} / {{ submission.version_detail_no }}
         </div>
         <div class="mb-1">
           <span class="font-medium">제출일:</span> {{ fmt(submission.submit_at) }}
           <span class="mx-2 text-gray-400">|</span>
-          <span class="font-medium">수정일:</span> {{ fmt(submission.updated_at) }}
+          <span class="font-medium">수정일:</span>
+          {{ fmt(submission.updated_at) }}
         </div>
         <div class="mb-1">
-          <span class="font-medium">작성자:</span> {{ submission.written_by ?? "-" }}
+          <span class="font-medium">작성자:</span>
+          {{ submission.written_by ?? "-" }}
           <span class="mx-2 text-gray-400">|</span>
-          <span class="font-medium">담당자:</span> {{ submission.assi_by ?? "-" }}
+          <span class="font-medium">담당자:</span>
+          {{ submission.assi_by ?? "-" }}
         </div>
       </div>
 
@@ -95,12 +96,14 @@
               <div class="mt-1">
                 <span class="inline-block w-12 text-gray-500 text-sm">답변</span> :
                 <template v-if="Array.isArray(renderAnswer(item))">
-                  <span class="text-gray-900">{{
-                    renderAnswer(item).join(", ") || "-"
-                  }}</span>
+                  <span class="text-gray-900">
+                    {{ renderAnswer(item).join(", ") || "-" }}
+                  </span>
                 </template>
                 <template v-else>
-                  <span class="text-gray-900">{{ renderAnswer(item) || "-" }}</span>
+                  <span class="text-gray-900">
+                    {{ renderAnswer(item) || "-" }}
+                  </span>
                 </template>
               </div>
 
@@ -110,7 +113,9 @@
               >
                 (선택지:
                 {{
-                  item.option_values.map((o) => o.label ?? o.value).join(", ")
+                  item.option_values
+                    .map((o) => o.label ?? o.value)
+                    .join(", ")
                 }})
               </div>
             </li>
@@ -119,13 +124,15 @@
       </div>
 
       <!-- 일반 전용: 우하단 수정 버튼 -->
-      <button
+      <MaterialButton
         v-if="isGeneral"
-        class="fixed right-6 bottom-6 shadow-lg border px-4 py-3 rounded-full bg-black text-white"
+        color="dark"
+        size="sm"
+        class="fixed right-6 bottom-6 shadow-lg rounded-full"
         @click="goEdit"
       >
         수정하기
-      </button>
+      </MaterialButton>
     </div>
   </section>
 </template>
@@ -134,6 +141,7 @@
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
+import MaterialButton from "@/components/MaterialButton.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -147,7 +155,7 @@ const userId = computed(() => Number(route.query.userId || 1));
 const isGeneral = computed(() => role.value === 1);
 const isAdmin = computed(() => role.value === 3);
 
-// ⚠️ 여기! 기존 data(ref) → submission(ref)로 변경
+// 기존 data(ref) → submission(ref)
 const submissionRef = ref(null);
 const submission = computed(() => submissionRef.value);
 
@@ -160,10 +168,10 @@ async function fetchDetail() {
   loading.value = true;
   error.value = "";
   try {
-    // 응답 변수명은 res로!
     const res = await axios.get(`/api/survey/submission/${submitCode}`);
 
-    if (res.data?.success === false) throw new Error(res.data.message || "조회 실패");
+    if (res.data?.success === false)
+      throw new Error(res.data.message || "조회 실패");
 
     const payload = res.data?.result ?? res.data;
 
@@ -215,8 +223,15 @@ function parseAnswerText(answer_text) {
   if (typeof answer_text === "string") {
     const s = answer_text.trim();
     if (!s) return "";
-    if ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith("{") && s.endsWith("}"))) {
-      try { return JSON.parse(s); } catch { return s; }
+    if (
+      (s.startsWith("[") && s.endsWith("]")) ||
+      (s.startsWith("{") && s.endsWith("}"))
+    ) {
+      try {
+        return JSON.parse(s);
+      } catch {
+        return s;
+      }
     }
     return s;
   }
@@ -224,11 +239,14 @@ function parseAnswerText(answer_text) {
 }
 
 function renderAnswer(item) {
-  const options = Array.isArray(item.option_values) ? item.option_values : [];
+  const options = Array.isArray(item.option_values)
+    ? item.option_values
+    : [];
   const raw = parseAnswerText(item.answer_text);
 
   if (isChoiceType(item.question_type)) {
-    if (Array.isArray(raw)) return raw.map((v) => mapValueToLabel(v, options));
+    if (Array.isArray(raw))
+      return raw.map((v) => mapValueToLabel(v, options));
     if (raw == null || raw === "") return "";
     return mapValueToLabel(raw, options);
   }
@@ -243,7 +261,11 @@ function normalizeOptions(val) {
   if (typeof val === "string") {
     const s = val.trim();
     if (!s) return [];
-    try { return JSON.parse(s); } catch { return []; }
+    try {
+      return JSON.parse(s);
+    } catch {
+      return [];
+    }
   }
   return [];
 }
@@ -269,5 +291,7 @@ function fmt(v) {
 </script>
 
 <style scoped>
-section { color: #111; }
+section {
+  color: #111;
+}
 </style>

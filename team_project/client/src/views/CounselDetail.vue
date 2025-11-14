@@ -123,6 +123,32 @@
               {{ mainForm.content || "-" }}
             </div>
           </div>
+
+          <!-- 🔹 첨부 파일 영역 -->
+          <div class="mt-3">
+            <div class="text-sm text-gray-500 mb-1">첨부 파일</div>
+
+            <div v-if="attachments.length">
+              <ul class="list-disc pl-4 text-sm">
+                <li
+                  v-for="file in attachments"
+                  :key="file.attachCode"
+                  class="text-blue-600"
+                >
+                  <a
+                    :href="file.url"
+                    target="_blank"
+                    class="hover:underline break-all"
+                  >
+                    {{ file.originalFilename }}
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div v-else class="text-xs text-gray-400">
+              첨부된 파일이 없습니다.
+            </div>
+          </div>
         </div>
 
         <!-- 추가 상담 기록 -->
@@ -219,6 +245,7 @@ const submitCode = Number(route.params.submitCode);
 
 const loading = ref(false);
 const error = ref("");
+const attachments = ref([]); // 🔹 첨부파일 목록
 
 // 쿼리로 넘어온 role (2: 담당자, 3: 관리자, 4: 시스템)
 const role = computed(() => Number(route.query.role || 0));
@@ -276,6 +303,9 @@ async function loadData() {
         title: d.title || "",
         content: d.content || "",
       })) || [];
+
+    // 🔹 첨부파일 세팅
+    attachments.value = res.attachments || [];
   } catch (e) {
     console.error(e);
     error.value = e.message || "상담 정보 조회 중 오류";

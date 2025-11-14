@@ -23,6 +23,8 @@ const pool = mariadb.createPool({
     error: console.log,
   },
   dateStrings: true,
+  charset: "UTF8MB4",
+  collation: "utf8mb4_general_ci",
 });
 
 // 연결 테스트

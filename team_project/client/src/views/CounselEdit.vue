@@ -8,9 +8,6 @@
       </div>
 
       <div class="space-x-2 flex items-center">
-        <MaterialButton color="dark" size="sm" @click="reload">
-          불러오기
-        </MaterialButton>
         <MaterialButton color="dark" size="sm" @click="goBack">
           ← 목록으로
         </MaterialButton>
@@ -70,6 +67,95 @@
             @input="(e) => (mainForm.content = e.target.value)"
           />
         </div>
+
+        <!-- 🔹 기존 첨부 파일 목록 -->
+        <div>
+          <span class="block text-sm font-medium mb-1">기존 첨부 파일</span>
+
+          <div v-if="attachments.length">
+            <ul class="list-disc pl-4 text-xs text-gray-700 space-y-1">
+              <li
+                v-for="file in attachments"
+                :key="file.attachCode"
+                class="flex items-center justify-between gap-2"
+              >
+                <div class="flex items-center gap-2 min-w-0">
+                  <a
+                    :href="file.url"
+                    target="_blank"
+                    class="text-blue-600 hover:underline break-all"
+                    :class="{
+                      'line-through text-gray-400':
+                        removedAttachmentCodes.includes(file.attachCode),
+                    }"
+                  >
+                    {{ file.originalFilename }}
+                  </a>
+                  <span
+                    v-if="removedAttachmentCodes.includes(file.attachCode)"
+                    class="text-[11px] text-red-500"
+                  >
+                    삭제 예정
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  class="shrink-0 px-2 py-0.5 border rounded text-[11px] text-gray-600 hover:bg-gray-100"
+                  @click="toggleRemoveAttachment(file.attachCode)"
+                >
+                  {{
+                    removedAttachmentCodes.includes(file.attachCode)
+                      ? "취소"
+                      : "삭제"
+                  }}
+                </button>
+              </li>
+            </ul>
+          </div>
+          <div v-else class="text-xs text-gray-400">
+            기존에 첨부된 파일이 없습니다.
+          </div>
+        </div>
+
+        <!-- ✅ 새로 추가할 첨부 파일 -->
+        <div>
+          <label class="block text-sm mb-1 font-medium">첨부 파일 추가</label>
+          <input
+            ref="fileInputRef"
+            type="file"
+            multiple
+            @change="onNewFilesChange"
+            class="block w-full text-sm"
+          />
+          <p class="mt-1 text-xs text-gray-500">
+            * 여러 개 파일을 한 번에 선택하거나, 나눠서 여러 번 선택할 수
+            있습니다.
+          </p>
+
+          <!-- 새로 선택한 파일 목록 -->
+          <ul
+            v-if="newFiles.length"
+            class="mt-2 text-xs text-gray-700 space-y-1"
+          >
+            <li
+              v-for="(file, idx) in newFiles"
+              :key="file.name + '_' + file.lastModified + '_' + idx"
+              class="flex items-center justify-between gap-2"
+            >
+              <span class="truncate">
+                • {{ file.name }} ({{ (file.size / 1024).toFixed(1) }} KB)
+              </span>
+              <button
+                type="button"
+                class="shrink-0 px-2 py-0.5 border rounded text-[11px] text-gray-600 hover:bg-gray-100"
+                @click="removeNewFile(idx)"
+              >
+                삭제
+              </button>
+            </li>
+          </ul>
+        </div>
       </div>
 
       <!-- 버튼 (추가 / 우선순위 / 완료) -->
@@ -91,7 +177,7 @@
           </select>
 
           <MaterialButton color="dark" size="sm" @click="submitAll">
-            수정 완료
+            {{ isResubmit ? "재작성 완료" : "수정 완료" }}
           </MaterialButton>
         </div>
       </div>
@@ -162,6 +248,11 @@ const submitCode = Number(route.params.submitCode);
 const loading = ref(false);
 const error = ref("");
 
+const status = ref(""); // 상담 상태 (CB2/CB3/CB4/CB5 ...)
+
+// CB4(반려)인 경우 재작성 모드
+const isResubmit = computed(() => status.value === "CB4");
+
 // 기본 정보 / 메인 폼 / 기록 / 우선순위
 const submitInfo = ref({
   name: "",
@@ -169,7 +260,10 @@ const submitInfo = ref({
   submitAt: "",
 });
 
-const formattedSubmitAt = computed(() => submitInfo.value.submitAt || "-");
+const formattedSubmitAt = computed(() => {
+  const v = submitInfo.value.submitAt;
+  return v ? v.slice(0, 10) : "-";
+});
 
 const mainForm = ref({
   counselDate: "",
@@ -180,12 +274,21 @@ const mainForm = ref({
 const records = ref([]);
 const priority = ref("계획");
 
-// 상담 상세 불러오기 (백엔드 응답 구조는 필요한 대로 맞춰 쓰면 됨)
+// 🔹 기존 첨부파일 목록
+const attachments = ref([]);
+
+// 🔹 삭제 대상 attach_code 목록
+const removedAttachmentCodes = ref([]);
+
+// 🔹 새로 추가하는 파일들
+const newFiles = ref([]);
+const fileInputRef = ref(null);
+
+// 상담 상세 불러오기
 async function loadData() {
   loading.value = true;
   error.value = "";
   try {
-    // 예시: GET /api/counsel/:submitCode 로 상담 상세 조회
     const { data } = await axios.get(`/api/counsel/${submitCode}`);
 
     if (!data?.success || !data.result) {
@@ -203,8 +306,8 @@ async function loadData() {
     };
 
     priority.value = res.priority || "계획";
+    status.value = res.status || "";
 
-    // 상세 기록들
     records.value =
       (res.details || []).map((d, idx) => ({
         id: Date.now() + idx,
@@ -212,16 +315,14 @@ async function loadData() {
         title: d.title || "",
         content: d.content || "",
       })) || [];
+
+    attachments.value = res.attachments || [];
   } catch (e) {
     console.error(e);
     error.value = e.message || "상담 정보 조회 중 오류";
   } finally {
     loading.value = false;
   }
-}
-
-function reload() {
-  loadData();
 }
 
 function openSubmissionDetail() {
@@ -244,6 +345,42 @@ function removeRecord(id) {
   records.value = records.value.filter((r) => r.id !== id);
 }
 
+// ✅ 기존 첨부 삭제 토글
+function toggleRemoveAttachment(attachCode) {
+  const idx = removedAttachmentCodes.value.indexOf(attachCode);
+  if (idx === -1) {
+    removedAttachmentCodes.value.push(attachCode);
+  } else {
+    removedAttachmentCodes.value.splice(idx, 1);
+  }
+}
+
+// ✅ 새 파일 선택 (누적)
+function onNewFilesChange(e) {
+  const files = Array.from(e.target.files || []);
+
+  const newOnes = files.filter(
+    (f) =>
+      !newFiles.value.some(
+        (ex) =>
+          ex.name === f.name &&
+          ex.size === f.size &&
+          ex.lastModified === f.lastModified
+      )
+  );
+
+  newFiles.value = [...newFiles.value, ...newOnes];
+
+  if (e.target) {
+    e.target.value = "";
+  }
+}
+
+// ✅ 새 파일 개별 삭제
+function removeNewFile(index) {
+  newFiles.value.splice(index, 1);
+}
+
 // 유효성
 function validate() {
   if (!mainForm.value.counselDate) return "상담일을 입력해주세요.";
@@ -258,7 +395,7 @@ function validate() {
   return null;
 }
 
-// 저장(수정 완료) → /api/counsel/new 재사용 (백엔드에서 upsert 처리)
+// 저장(수정 완료) → multipart로 전송
 async function submitAll() {
   const err = validate();
   if (err) {
@@ -267,17 +404,34 @@ async function submitAll() {
   }
 
   try {
-    const payload = {
+    const formJson = {
       submitCode,
       priority: priority.value,
       mainForm: mainForm.value,
       records: records.value,
+      removeAttachmentCodes: removedAttachmentCodes.value, // 🔹 삭제할 첨부 목록
     };
 
-    const res = await axios.post("/api/counsel/new", payload);
+    const formData = new FormData();
+    formData.append("formJson", JSON.stringify(formJson));
+
+    // 새로 추가된 파일들
+    newFiles.value.forEach((file) => {
+      formData.append("mainFiles", file);
+    });
+
+    const res = await axios.post("/api/counsel/new", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     if (res.data?.success) {
-      alert("상담 수정이 완료되었습니다.");
+      if (isResubmit.value) {
+        alert("재작성이 완료되었습니다. 승인요청이 다시 올라갔습니다.");
+      } else {
+        alert("상담 수정이 완료되었습니다.");
+      }
       router.push({ name: "counselList" });
     } else {
       alert(res.data.message || "수정 실패");

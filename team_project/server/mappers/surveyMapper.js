@@ -532,7 +532,6 @@ module.exports = {
   insertSurvey,
   getLatestSurvey,
   insertAnswers,
-  // getSurveyDetail,
   updateSurveyVersion,
   listSubmissionsByRole,
   getSubmissionDetail,
