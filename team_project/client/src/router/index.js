@@ -4,22 +4,23 @@ import Dashboard from '../views/Dashboard.vue';
 import Tables from '../views/Tables.vue';
 import Billing from '../views/Billing.vue';
 // import RTL from "../views/Rtl.vue";
-import Notifications from '../views/Notifications.vue';
-import Profile from '../views/Profile.vue';
-import SignIn from '../views/SignIn.vue';
-import SignUp from '../views/SignUp.vue';
-import Test from '../views/Test.vue';
-import Sponsor from '../views/Sponsor/Sponsor.vue';
-import EventMain from '../views/EventMain.vue';
-import EventList from '../views/EventList.vue';
-import EventForm from '../views/EventForm.vue';
-import Organization from '../views/Organization.vue';
+import Notifications from "../views/Notifications.vue";
+import Profile from "../views/Profile.vue";
+import SignIn from "../views/SignIn.vue";
+import SignUp from "../views/SignUp.vue";
+import Test from "../views/Test.vue";
+import Sponsor from "../views/Sponsor/Sponsor.vue";
+import EventMain from "../views/EventMain.vue";
+import EventList from "../views/EventList.vue";
+import EventForm from "../views/EventForm.vue";
+import EventInfo from "../views/EventInfo.vue";
+import Organization from "../views/Organization.vue";
 
 const routes = [
   {
-    path: '/',
-    name: 'dashboard',
-    redirect: '/dashboard',
+    path: "/",
+    name: "dashboard",
+    redirect: "/dashboard",
   },
   {
     path: '/test',
@@ -231,6 +232,12 @@ const routes = [
     path: '/event/add',
     name: 'EventAdd',
     component: EventForm,
+  },
+  // 이벤트 상세
+  {
+    path: "/event/info",
+    name: "EventInfo",
+    component: EventInfo,
   },
 ];
 

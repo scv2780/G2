@@ -63,28 +63,29 @@ const selectEventList = `
   ORDER BY e.event_code DESC
 `;
 
-// 첨부파일 등록
-const insertAttachment = `
-INSERT INTO attachment (
-  original_filename,
-  server_filename,
-  file_path,
-  linked_table_name,
-  linked_record_pk
-) VALUES (?, ?, ?, ?, ?)
-`;
+// // 첨부파일 등록
+// const insertAttachment = `
+// INSERT INTO attachment (
+//   original_filename,
+//   server_filename,
+//   file_path,
+//   linked_table_name,
+//   linked_record_pk
+// ) VALUES (?, ?, ?, ?, ?)
+// `;
 
-// 첨부파일 조회
-const selectAttachList = `
-SELECT
-    attach_code,
-    original_filename,
-    server_filename,
-    file_path
-FROM attachment
-WHERE linked_table_name = 'event'
-  AND linked_record_pk = ?
-`;
+// // 첨부파일 조회
+// const selectAttachList = `
+// SELECT
+//     attach_code,
+//     original_filename,
+//     server_filename,
+//     file_path
+// FROM attachment
+// WHERE linked_table_name = 'event'
+//   AND linked_record_pk = ?
+
+// `;
 
 // 매니저 등록
 const insertManager = `

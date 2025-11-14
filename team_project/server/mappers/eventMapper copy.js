@@ -4,6 +4,9 @@ const eventSQL = require("../sql/eventSQL");
 
 const moment = require("moment");
 const commonCodeService = require("../services/commonCodeService");
+
+const attachmentService = require("../services/attachmentService");
+
 // ==========================
 // 이벤트
 // ==========================
@@ -59,7 +62,7 @@ async function selectEventList(filters) {
   }
 }
 
-// ✅ 이벤트 단건조회 + 세부 이벤트 + 서브 매니저 + 첨부파일
+// ✅ 이벤트 단건조회 + 세부 이벤트 + 서브 매니저 (첨부파일은 독립 API로)
 async function selectEventOneFull(event_code) {
   let conn;
   try {
@@ -86,9 +89,10 @@ async function selectEventOneFull(event_code) {
     ]);
 
     // 4️⃣ 첨부파일 조회 (코드명 없음)
-    const attachments = await conn.query(eventSQL.selectAttachList, [
-      event_code,
-    ]);
+    const attachments = await attachmentService.getAttachments(
+      "event",
+      event_code
+    );
 
     // 5️⃣ 서브 매니저 조회 (코드값만 가져와서 Node.js에서 매핑)
     let subManagers = await conn.query(eventSQL.selectManager, [event_code]);
@@ -120,7 +124,67 @@ async function selectEventOneFull(event_code) {
   }
 }
 
-// 이벤트 + 세부 이벤트 + 첨부파일 + 서브매니저 등록
+// async function selectEventOneFull(event_code) {
+//   let conn;
+//   try {
+//     conn = await pool.getConnection();
+
+//     // 1️⃣ 이벤트 단건조회
+//     const rows = await conn.query(eventSQL.selectEventOne, [event_code]);
+//     const event = rows[0];
+//     if (!event) return null;
+
+//     // 2️⃣ 코드명 매핑 (공통코드 있는 컬럼만)
+//     event.recruit_status_name = await commonCodeService.getCodeName(
+//       "DC",
+//       event.recruit_status
+//     );
+//     event.event_type_name = await commonCodeService.getCodeName(
+//       "DD",
+//       event.event_type
+//     );
+
+//     // 3️⃣ 세부 이벤트 조회
+//     const subEvents = await conn.query(eventSQL.selectSubEventList, [
+//       event_code,
+//     ]);
+
+//     // 4️⃣ 첨부파일 조회 (코드명 없음)
+//     const attachments = await conn.query(eventSQL.selectAttachList, [
+//       event_code,
+//     ]);
+
+//     // 5️⃣ 서브 매니저 조회 (코드값만 가져와서 Node.js에서 매핑)
+//     let subManagers = await conn.query(eventSQL.selectManager, [event_code]);
+//     subManagers = await Promise.all(
+//       subManagers.map(async (m) => {
+//         m.manager_type_name = await commonCodeService.getCodeName(
+//           "DA",
+//           m.manager_type
+//         );
+//         m.manager_category_name = await commonCodeService.getCodeName(
+//           "DB",
+//           m.manager_category
+//         );
+//         return m;
+//       })
+//     );
+
+//     return {
+//       ...event,
+//       sub_events: subEvents,
+//       attachments,
+//       sub_managers: subManagers,
+//     };
+//   } catch (err) {
+//     console.error("[eventMapper.js || selectEventOneFull 실패]", err);
+//     throw err;
+//   } finally {
+//     if (conn) conn.release();
+//   }
+// }
+
+// 이벤트 + 세부 이벤트 + 서브매니저 등록
 async function addEventFull(data) {
   let conn;
   try {
@@ -162,21 +226,7 @@ async function addEventFull(data) {
       }
     }
 
-    // 3️⃣ 첨부파일 등록
-    if (data.attachments && data.attachments.length > 0) {
-      for (const file of data.attachments) {
-        const attachParams = [
-          file.original_filename,
-          file.server_filename,
-          file.file_path,
-          "event", // linked_table_name
-          event_code, // linked_record_pk
-        ];
-        await conn.query(eventSQL.insertAttachment, attachParams);
-      }
-    }
-
-    // 4️⃣ 메인 매니저 등록 (이벤트 등록한 회원)
+    // 3️⃣ 메인 매니저 등록 (이벤트 등록한 회원)
     await conn.query(eventSQL.insertManager, [
       "DB2", // DB2 이벤트
       event_code,
@@ -184,7 +234,7 @@ async function addEventFull(data) {
       data.user_code,
     ]);
 
-    // 5️⃣ 서브 매니저 등록
+    // 4️⃣ 서브 매니저 등록
     if (data.sub_managers && data.sub_managers.length > 0) {
       for (const subMgr of data.sub_managers) {
         await conn.query(eventSQL.insertManager, [
@@ -206,6 +256,92 @@ async function addEventFull(data) {
     if (conn) conn.release();
   }
 }
+
+// async function addEventFull(data) {
+//   let conn;
+//   try {
+//     conn = await pool.getConnection();
+//     await conn.beginTransaction();
+
+//     // 1️⃣ 이벤트 등록
+//     const eventParams = [
+//       data.org_code,
+//       data.user_code,
+//       data.event_name,
+//       data.event_type,
+//       data.event_content,
+//       data.event_location,
+//       data.target_audience,
+//       data.max_participants,
+//       moment(data.recruit_start_date).format("YYYY-MM-DD"),
+//       moment(data.recruit_end_date).format("YYYY-MM-DD"),
+//       moment(data.event_start_date).format("YYYY-MM-DD"),
+//       moment(data.event_end_date).format("YYYY-MM-DD"),
+//       data.recruit_status,
+//       moment(data.event_register_date).format("YYYY-MM-DD HH:mm:ss"),
+//       data.register_status,
+//     ];
+//     const eventResult = await conn.query(eventSQL.insertEvent, eventParams);
+//     const event_code = eventResult.insertId;
+
+//     // 2️⃣ 세부 이벤트 등록
+//     if (data.sub_events && data.sub_events.length > 0) {
+//       for (const sub of data.sub_events) {
+//         const subParams = [
+//           sub.sub_event_name,
+//           sub.sub_event_start_date,
+//           sub.sub_event_end_date,
+//           sub.sub_recruit_count,
+//           event_code,
+//         ];
+//         await conn.query(eventSQL.insertSubEvent, subParams);
+//       }
+//     }
+
+//     // 3️⃣ 첨부파일 등록
+//     if (data.attachments && data.attachments.length > 0) {
+//       for (const file of data.attachments) {
+//         const attachParams = [
+//           file.original_filename,
+//           file.server_filename,
+//           file.file_path,
+//           "event", // linked_table_name
+//           event_code, // linked_record_pk
+//         ];
+//         await conn.query(eventSQL.insertAttachment, attachParams);
+//       }
+//     }
+
+//     // 4️⃣ 메인 매니저 등록 (이벤트 등록한 회원)
+//     await conn.query(eventSQL.insertManager, [
+//       "DB2", // DB2 이벤트
+//       event_code,
+//       "DA1", // 메인 매니저
+//       data.user_code,
+//     ]);
+
+//     // 5️⃣ 서브 매니저 등록
+//     if (data.sub_managers && data.sub_managers.length > 0) {
+//       for (const subMgr of data.sub_managers) {
+//         await conn.query(eventSQL.insertManager, [
+//           "DB2", // DB2 이벤트
+//           event_code,
+//           "DA2", // 서브 매니저
+//           subMgr.user_code,
+//         ]);
+//       }
+//     }
+
+//     await conn.commit();
+//     return { event_code, ...data };
+//   } catch (err) {
+//     if (conn) await conn.rollback();
+//     console.error("[eventMapper.js || 이벤트 전체 등록 실패]", err.message);
+//     throw err;
+//   } finally {
+//     if (conn) conn.release();
+//   }
+// }
 
 // 이벤트 + 세부 이벤트 등록
 async function addEventWithSub(data) {

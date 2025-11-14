@@ -1,9 +1,15 @@
 <template>
   <div class="event-main">
     <h2>이벤트 메인페이지</h2>
-    <button @click="$router.push('/event/add')">이벤트 등록</button>
+    <button @click="goToEventAdd()" style="cursor: pointer">이벤트 등록</button>
     <div class="cards">
-      <div class="card" v-for="event in events" :key="event.event_code">
+      <div
+        class="card"
+        v-for="event in events"
+        :key="event.event_code"
+        @click="goToEventInfo(event.event_code)"
+        style="cursor: pointer"
+      >
         <div class="card-image">
           <img
             v-if="event.file_path"
@@ -36,6 +42,17 @@
 import { ref, onMounted } from "vue";
 import axios from "axios";
 import dateFormat from "@/utils/dateFormat";
+import { useRouter } from "vue-router";
+
+const router = useRouter();
+
+const goToEventAdd = () => {
+  router.push({ name: "EventAdd" });
+};
+
+const goToEventInfo = (event_code) => {
+  router.push({ name: "EventInfo", query: { code: event_code } });
+};
 
 const events = ref([]);
 
