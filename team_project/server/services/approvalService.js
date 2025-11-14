@@ -150,6 +150,91 @@ async function rejectStaff({ approvalCode, reason }) {
   return result;
 }
 
+// 우선순위 승인 목록 (페이징 + 검색/정렬)
+async function getPriorityApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  return await approvalMapper.priorityApprovalList({
+    page,
+    size,
+    keyword,
+    state,
+    orderBy,
+  });
+}
+
+// 지원계획 승인 목록 (페이징 + 검색/정렬)
+async function getSupportPlanApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  return await approvalMapper.supportPlanApprovalList({
+    page,
+    size,
+    keyword,
+    state,
+    orderBy,
+  });
+}
+
+// 🔹 지원결과 승인 목록 (페이징 + 검색/정렬)
+async function getSupportResultApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  return await approvalMapper.supportResultApprovalList({
+    page,
+    size,
+    keyword,
+    state,
+    orderBy,
+  });
+}
+
+// 🔹 이벤트 계획 승인 목록 (페이징 + 검색/정렬)
+async function getEventPlanApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  return await approvalMapper.eventPlanApprovalList({
+    page,
+    size,
+    keyword,
+    state,
+    orderBy,
+  });
+}
+
+// 🔹 이벤트 결과 승인 목록 (페이징 + 검색/정렬)
+async function getEventResultApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  return await approvalMapper.eventResultApprovalList({
+    page,
+    size,
+    keyword,
+    state,
+    orderBy,
+  });
+}
+
 module.exports = {
   managerApprovalList,
   approve,
@@ -157,4 +242,9 @@ module.exports = {
   staffApprovalList,
   approveStaff,
   rejectStaff,
+  getPriorityApprovalList,
+  getSupportPlanApprovalList,
+  getSupportResultApprovalList,
+  getEventPlanApprovalList,
+  getEventResultApprovalList,
 };

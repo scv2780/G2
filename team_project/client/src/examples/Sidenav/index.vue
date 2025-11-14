@@ -23,9 +23,7 @@
           class="navbar-brand-img h-100"
           alt="main_logo"
         />
-        <span class="ms-2 font-weight-bold text-white"
-          >Material Dashboard 2</span
-        >
+        <span class="ms-2 font-weight-bold text-white">미래 가젯 연구소</span>
       </a>
     </div>
     <hr class="horizontal light mt-0 mb-2" />

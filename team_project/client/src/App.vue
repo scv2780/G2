@@ -13,6 +13,14 @@ Coded by www.creative-tim.com
 * The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
 -->
 <template>
+  <!-- <sidenav-list :menu="menu" /> -->
+  <sidenav
+    :custom_class="color"
+    :class="[isRTL ? 'fixed-end' : 'fixed-start']"
+    v-if="showSidenav && $route.path !== '/dashboard'"
+  />
+  <!-- :menu="sidebar.menuData" -->
+
   <main
     class="main-content position-relative max-height-vh-100 h-100 overflow-x-hidden"
   >
@@ -32,43 +40,46 @@ Coded by www.creative-tim.com
   </main>
 </template>
 <script>
-import Configurator from '@/examples/Configurator.vue';
-import Navbar from '@/examples/Navbars/Navbar.vue';
-import AppFooter from '@/examples/Footer.vue';
-import { mapMutations, mapState } from 'vuex';
+import Sidenav from "./examples/Sidenav";
+import Configurator from "@/examples/Configurator.vue";
+import Navbar from "@/examples/Navbars/Navbar.vue";
+import AppFooter from "@/examples/Footer.vue";
+import { mapMutations, mapState } from "vuex";
+// import { useSidebarStore } from "@/store/sidebar";
 
 export default {
-  name: 'App',
-  components: {
-    Configurator,
-    Navbar,
-    AppFooter,
+  name: "App",
+  components: { Sidenav, Configurator, Navbar, AppFooter },
+
+  setup() {
+    // const sidebar = useSidebarStore(); // ✔ setup 내부에서 Pinia 사용
+    // // return { sidebar };
   },
   methods: {
-    ...mapMutations(['toggleConfigurator', 'navbarMinimize']),
+    ...mapMutations(["toggleConfigurator", "navbarMinimize"]),
   },
   computed: {
     ...mapState([
-      'isRTL',
-      'color',
-      'isAbsolute',
-      'isNavFixed',
-      'navbarFixed',
-      'absolute',
-      'showSidenav',
-      'showNavbar',
-      'showFooter',
-      'showConfig',
-      'hideConfigButton',
+      "isRTL",
+      "color",
+      "isAbsolute",
+      "isNavFixed",
+      "navbarFixed",
+      "absolute",
+      "showSidenav",
+      "showNavbar",
+      "showFooter",
+      "showConfig",
+      "hideConfigButton",
     ]),
   },
   beforeMount() {
-    this.$store.state.isTransparent = 'bg-transparent';
+    this.$store.state.isTransparent = "bg-transparent";
 
-    const sidenav = document.getElementsByClassName('g-sidenav-show')[0];
+    const sidenav = document.getElementsByClassName("g-sidenav-show")[0];
 
     if (window.innerWidth > 1200) {
-      sidenav.classList.add('g-sidenav-pinned');
+      sidenav.classList.add("g-sidenav-pinned");
     }
   },
 };

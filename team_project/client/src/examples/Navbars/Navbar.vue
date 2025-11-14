@@ -15,13 +15,19 @@
         class="header-button-group d-flex justify-content-center align-items-center gap-3 flex-grow-1"
       >
         <router-link to="/test" class="btn btn-outline-primary btn-sm"
-          >버튼1</router-link
+          >대기자</router-link
         >
         <router-link to="/test" class="btn btn-outline-info btn-sm"
-          >버튼2</router-link
+          >조사지</router-link
         >
         <router-link to="/test" class="btn btn-outline-success btn-sm"
-          >버튼3</router-link
+          >상담</router-link
+        >
+        <router-link to="/sponsor" class="btn btn-outline-success btn-sm"
+          >후원</router-link
+        >
+        <router-link to="/test" class="btn btn-outline-success btn-sm"
+          >이벤트</router-link
         >
       </div>
 
@@ -214,22 +220,22 @@
   </nav>
 </template>
 <script>
-import Breadcrumbs from '../Breadcrumbs.vue';
-import { mapMutations, mapState } from 'vuex';
+import Breadcrumbs from "../Breadcrumbs.vue";
+import { mapMutations, mapState } from "vuex";
 
 export default {
-  name: 'navbar',
+  name: "navbar",
   data() {
     return {
       showMenu: false,
     };
   },
-  props: ['minNav', 'color'],
+  props: ["minNav", "color"],
   created() {
     this.minNav;
   },
   methods: {
-    ...mapMutations(['navbarMinimize', 'toggleConfigurator']),
+    ...mapMutations(["navbarMinimize", "toggleConfigurator"]),
 
     toggleSidebar() {
       this.navbarMinimize();
@@ -239,7 +245,7 @@ export default {
     Breadcrumbs,
   },
   computed: {
-    ...mapState(['isRTL', 'isAbsolute']),
+    ...mapState(["isRTL", "isAbsolute"]),
 
     currentRouteName() {
       return this.$route.name;

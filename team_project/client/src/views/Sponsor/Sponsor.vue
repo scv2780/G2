@@ -16,13 +16,12 @@
 </template>
 
 <script setup>
-import ProgramList from "@/components/Sponsor/ProgramList.vue";
-import ProgramAdd from "@/components/Sponsor/ProgramAdd.vue";
+import ProgramList from "@/components/Sponsor/Common/ProgramList.vue";
+import ProgramAdd from "@/components/Sponsor/Common/ProgramAdd.vue";
 import { ref } from "vue";
 let programListRef = ref(null);
 let showList = ref(true); // 화면 상태 관리
 let selectedProgram = ref(null); //  선택된 프로그램 정보를 저장할 ref
-
 // '후원 프로그램 등록' 버튼 클릭 시
 const goToAdd = () => {
   selectedProgram.value = null; // 등록 시에는 초기화
@@ -44,4 +43,43 @@ const selectProgramForEdit = (programData) => {
   selectedProgram.value = programData; // 선택된 데이터 저장
   showList.value = false; // ProgramAdd 화면 표시 (수정 모드 진입)
 };
+
+// // 사이드 바 메뉴 출력
+// import { useSidebarStore } from "@/store/sidebar";
+// const sideList = [
+//   {
+//     name: "후원 프로그램 관리",
+//     link: "sponsor",
+//   },
+//   {
+//     name: "담당자 관리",
+//     link: "sponsor",
+//   },
+//   {
+//     name: "전체 후원 거래 내역서",
+//     link: "sponsor",
+//   },
+//   {
+//     name: "활동 보고서",
+//     link: "sponsor",
+//   },
+//   {
+//     name: "총괄표 관리",
+//     link: "sponsor",
+//   },
+//   {
+//     name: "후원 보고서 관리",
+//     link: "sponsor",
+//   },
+//   {
+//     name: "분기 통지 / 발송 이력",
+//     link: "sponsor",
+//   },
+// ];
+// const sidebar = useSidebarStore();
+// sidebar.setMenu({
+//   title: "후원 프로그램 관리",
+//   role: "관리자",
+//   obj: sideList,
+// });
 </script>
