@@ -9,14 +9,14 @@ router.get('/checkid', async (req, res) => {
     const result = await userService.checkId(userId);
     res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error('[ authUser.js -> checkid 라우터 오류 ]', err);
     res
       .status(500)
       .json({ ok: false, message: '[ authUser.js -> checkid 오류 ]' });
   }
 });
 
-// 회원가입 -> DB로 post
+// 개인 회원가입
 router.post('/addUser', async (req, res) => {
   try {
     const result = await userService.addUser(req.body);
@@ -29,30 +29,27 @@ router.post('/addUser', async (req, res) => {
   }
 });
 
+// 기관 회원가입
 router.post('/addOrg', async (req, res) => {
   try {
     const result = await userService.addOrg(req.body);
     res.json(result);
   } catch (err) {
-    console.error(err);
+    console.error('[ authUser.js -> addOrg 라우터 오류 ]', err);
     res
       .status(500)
       .json({ ok: false, message: '[ signUser.js 회원가입 실패 ]' });
   }
 });
 
-// 기관명 자동 검색
-router.get('/searchOrg', async (req, res) => {
+// 회원가입
+router.post('/login', async (req, res) => {
   try {
-    const keyword = req.query.name;
-    const result = await userService.searchOrg(keyword);
+    const result = await userService.login(req.body);
     res.json(result);
   } catch (err) {
-    console.error('[ searchOrg 라우터 오류 ]', err);
-    res
-      .status(500)
-      .json({ ok: false, message: '[ signUser.js 기관 검색 실패 ]' });
+    console.error(err);
+    res.status(500).json({ ok: false, message: '[ signUser.js 로그인 실패 ]' });
   }
 });
-
 module.exports = router;

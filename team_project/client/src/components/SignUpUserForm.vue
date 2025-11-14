@@ -153,6 +153,7 @@ export default {
       address: '',
       email: '',
       org_code: '',
+      role: 'AA1',
       emailSent: false, // 이메일 인증 여부(현재 미구현)
     };
   },
@@ -207,6 +208,7 @@ export default {
         phone: formattedPhone,
         address: this.address,
         email: this.email,
+        role: this.role,
         org_code: this.org_code ? Number(this.org_code) : null,
       });
     },

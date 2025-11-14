@@ -97,10 +97,526 @@ const activateUserByApproval = `
  WHERE ra.approval_code = ?
 `;
 
+// 우선순위 승인 요청 목록 (페이징용)
+const priorityApprovalList = `
+  SELECT
+      ra.approval_code                         -- 승인코드
+    , ss.submit_code          AS submit_code   -- 상담 상세로 갈 때 필요
+    , c.child_name            AS child_name    -- 아이 이름
+    , parent.name             AS parent_name   -- 보호자 이름
+    , mgr.name                AS manager_name  -- 담당자 이름
+    , org.org_name            AS org_name      -- 기관명
+    , cn.written_at           AS counsel_date  -- 상담기록(상담일자)
+    , c.disability_type       AS disability_type -- 장애유형
+    , cp.level                AS priority_level  -- 우선순위 등급(BB코드)
+    , ra.state                AS state         -- 상태(BA1/BA2/BA3)
+  FROM request_approval ra
+
+  LEFT JOIN counsel_note cn
+    ON ra.linked_table_name = 'counsel_note'
+   AND ra.linked_record_pk = cn.counsel_code
+
+  LEFT JOIN survey_submission ss
+    ON ss.submit_code = cn.submit_code
+
+  LEFT JOIN users parent
+    ON parent.user_code = ss.written_by
+
+  LEFT JOIN child c
+    ON c.user_code = parent.user_code
+
+  LEFT JOIN users mgr
+    ON mgr.user_code = ss.assi_by
+
+  LEFT JOIN organization org
+    ON org.org_code = mgr.org_code
+
+  LEFT JOIN case_priority cp
+    ON cp.submit_code = ss.submit_code
+   AND cp.is_current = 'Y'
+
+  WHERE ra.approval_type = 'AE3'  -- 우선순위 승인 요청
+
+  -- 상태 필터 (전체면 무시)
+  AND (? = '' OR ra.state = ?)
+
+  -- 검색어 필터 (전체면 무시)
+  AND (
+      ? = '' OR
+      c.child_name   LIKE CONCAT('%', ?, '%') OR
+      parent.name    LIKE CONCAT('%', ?, '%') OR
+      mgr.name       LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+
+  -- 정렬: orderBy 값(latest, oldest, name, priority)에 따라 동작
+  ORDER BY 
+    CASE WHEN ? = 'latest'   THEN ra.request_date END DESC,
+    CASE WHEN ? = 'oldest'   THEN ra.request_date END ASC,
+    CASE WHEN ? = 'name'     THEN c.child_name    END ASC,
+
+    /* 🔥 우선순위 정렬: BB1 → BB2 → BB3 */
+    CASE WHEN ? = 'priority' THEN 
+        CASE cp.level 
+            WHEN 'BB1' THEN 1
+            WHEN 'BB2' THEN 2
+            WHEN 'BB3' THEN 3
+            ELSE 4
+        END
+    END ASC,
+
+    ra.request_date DESC,       -- 기본: 최신순
+    ra.approval_code DESC
+  LIMIT ?, ?
+`;
+
+// 우선순위 승인 요청 총 개수
+const priorityApprovalTotalCount = `
+  SELECT COUNT(*) AS totalCount
+  FROM request_approval ra
+  LEFT JOIN counsel_note cn
+    ON ra.linked_table_name = 'counsel_note'
+   AND ra.linked_record_pk = cn.counsel_code
+  LEFT JOIN survey_submission ss
+    ON ss.submit_code = cn.submit_code
+  LEFT JOIN users parent
+    ON parent.user_code = ss.written_by
+  LEFT JOIN child c
+    ON c.user_code = parent.user_code
+  LEFT JOIN users mgr
+    ON mgr.user_code = ss.assi_by
+  LEFT JOIN organization org
+    ON org.org_code = mgr.org_code
+  LEFT JOIN case_priority cp
+    ON cp.submit_code = ss.submit_code
+   AND cp.is_current = 'Y'
+  WHERE ra.approval_type = 'AE3'
+  AND (? = '' OR ra.state = ?)
+  AND (
+      ? = '' OR
+      c.child_name   LIKE CONCAT('%', ?, '%') OR
+      parent.name    LIKE CONCAT('%', ?, '%') OR
+      mgr.name       LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+`;
+
+// 지원계획 승인 요청 목록 (페이징용)
+const supportPlanApprovalList = `
+  SELECT
+      ra.approval_code,                    -- 승인코드
+      c.child_name        AS child_name,   -- 아이 이름
+      parent.name         AS parent_name,  -- 보호자 이름
+      mgr.name            AS manager_name, -- 담당자 이름
+      org.org_name        AS org_name,     -- 기관명
+
+      sp.written_at       AS written_at,   -- 계획 작성일
+
+      c.disability_type   AS disability_type, -- 장애유형
+      cp.level            AS priority_level,  -- 우선순위(BB코드)
+      ra.state            AS state,           -- 상태(BA코드)
+
+      sp.plan_code        AS plan_code,
+      sp.submit_code      AS submit_code
+  FROM request_approval ra
+
+  LEFT JOIN support_plan sp
+    ON ra.linked_table_name = 'support_plan'
+   AND ra.linked_record_pk  = sp.plan_code
+
+  LEFT JOIN survey_submission ss
+    ON ss.submit_code = sp.submit_code
+
+  LEFT JOIN users parent
+    ON parent.user_code = ss.written_by
+
+  LEFT JOIN child c
+    ON c.user_code = parent.user_code
+
+  LEFT JOIN users mgr
+    ON mgr.user_code = sp.assi_by
+
+  LEFT JOIN organization org
+    ON org.org_code = mgr.org_code
+
+  LEFT JOIN case_priority cp
+    ON cp.submit_code = sp.submit_code
+   AND cp.is_current = 'Y'
+
+  WHERE ra.approval_type = 'AE4'           -- 지원계획 승인요청
+
+  -- 상태 필터
+  AND (? = '' OR ra.state = ?)
+
+  -- 검색어 필터
+  AND (
+      ? = '' OR
+      c.child_name   LIKE CONCAT('%', ?, '%') OR
+      parent.name    LIKE CONCAT('%', ?, '%') OR
+      mgr.name       LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+
+  ORDER BY 
+    CASE WHEN ? = 'latest'   THEN ra.request_date END DESC,
+    CASE WHEN ? = 'oldest'   THEN ra.request_date END ASC,
+    CASE WHEN ? = 'name'     THEN c.child_name    END ASC,
+
+    /* 🔥 우선순위 정렬: BB1 → BB2 → BB3 */
+    CASE WHEN ? = 'priority' THEN 
+        CASE cp.level 
+            WHEN 'BB1' THEN 1
+            WHEN 'BB2' THEN 2
+            WHEN 'BB3' THEN 3
+            ELSE 4
+        END
+    END ASC,
+
+    ra.request_date DESC,
+    ra.approval_code DESC
+  LIMIT ?, ?
+`;
+
+// 🔢 지원계획 승인 요청 총 개수
+const supportPlanApprovalTotalCount = `
+  SELECT COUNT(*) AS totalCount
+  FROM request_approval ra
+  LEFT JOIN support_plan sp
+    ON ra.linked_table_name = 'support_plan'
+   AND ra.linked_record_pk  = sp.plan_code
+  LEFT JOIN survey_submission ss
+    ON ss.submit_code = sp.submit_code
+  LEFT JOIN users parent
+    ON parent.user_code = ss.written_by
+  LEFT JOIN child c
+    ON c.user_code = parent.user_code
+  LEFT JOIN users mgr
+    ON mgr.user_code = sp.assi_by
+  LEFT JOIN organization org
+    ON org.org_code = mgr.org_code
+  LEFT JOIN case_priority cp
+    ON cp.submit_code = sp.submit_code
+   AND cp.is_current = 'Y'
+  WHERE ra.approval_type = 'AE4'
+  AND (? = '' OR ra.state = ?)
+  AND (
+      ? = '' OR
+      c.child_name   LIKE CONCAT('%', ?, '%') OR
+      parent.name    LIKE CONCAT('%', ?, '%') OR
+      mgr.name       LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+`;
+
+// 🔹 지원결과 승인 요청 목록 (페이징용)
+const supportResultApprovalList = `
+  SELECT
+      ra.approval_code,                    -- 승인코드
+      c.child_name        AS child_name,   -- 아이 이름
+      parent.name         AS parent_name,  -- 보호자 이름
+      mgr.name            AS manager_name, -- 담당자 이름
+      org.org_name        AS org_name,     -- 기관명
+
+      sr.written_at       AS written_at,   -- 결과 작성일
+
+      c.disability_type   AS disability_type, -- 장애유형
+      cp.level            AS priority_level,  -- 우선순위(BB코드)
+      ra.state            AS state,           -- 상태(BA코드)
+
+      sr.result_code      AS result_code,     -- 결과코드 (상세 이동용)
+      sr.plan_code        AS plan_code
+  FROM request_approval ra
+
+  /* 지원결과 헤더 */
+  LEFT JOIN support_result sr
+    ON ra.linked_table_name = 'support_result'
+   AND ra.linked_record_pk  = sr.result_code
+
+  /* 지원계획 헤더 */
+  LEFT JOIN support_plan sp
+    ON sp.plan_code = sr.plan_code
+
+  /* 조사지 헤더 */
+  LEFT JOIN survey_submission ss
+    ON ss.submit_code = sp.submit_code
+
+  /* 보호자(조사지 작성자) */
+  LEFT JOIN users parent
+    ON parent.user_code = ss.written_by
+
+  /* 아이: 보호자(user_code) 기준으로 연결 */
+  LEFT JOIN child c
+    ON c.user_code = parent.user_code
+
+  /* 담당자 & 기관 (지원결과 담당자 코드 사용) */
+  LEFT JOIN users mgr
+    ON mgr.user_code = sr.assi_by
+
+  LEFT JOIN organization org
+    ON org.org_code = mgr.org_code
+
+  /* 우선순위 (현재 값만) */
+  LEFT JOIN case_priority cp
+    ON cp.submit_code = ss.submit_code
+   AND cp.is_current = 'Y'
+
+  WHERE ra.approval_type = 'AE5'           -- 지원결과 승인요청
+
+  -- 상태 필터
+  AND (? = '' OR ra.state = ?)
+
+  -- 검색어 필터
+  AND (
+      ? = '' OR
+      c.child_name   LIKE CONCAT('%', ?, '%') OR
+      parent.name    LIKE CONCAT('%', ?, '%') OR
+      mgr.name       LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+
+  ORDER BY 
+    CASE WHEN ? = 'latest'   THEN ra.request_date END DESC,
+    CASE WHEN ? = 'oldest'   THEN ra.request_date END ASC,
+    CASE WHEN ? = 'name'     THEN c.child_name    END ASC,
+
+    /* 우선순위 정렬: BB1 → BB2 → BB3 */
+    CASE WHEN ? = 'priority' THEN 
+        CASE cp.level 
+            WHEN 'BB1' THEN 1
+            WHEN 'BB2' THEN 2
+            WHEN 'BB3' THEN 3
+            ELSE 4
+        END
+    END ASC,
+
+    ra.request_date DESC,
+    ra.approval_code DESC
+  LIMIT ?, ?
+`;
+
+// 🔢 지원결과 승인 요청 총 개수
+const supportResultApprovalTotalCount = `
+  SELECT COUNT(*) AS totalCount
+  FROM request_approval ra
+  LEFT JOIN support_result sr
+    ON ra.linked_table_name = 'support_result'
+   AND ra.linked_record_pk  = sr.result_code
+  LEFT JOIN support_plan sp
+    ON sp.plan_code = sr.plan_code
+  LEFT JOIN survey_submission ss
+    ON ss.submit_code = sp.submit_code
+  LEFT JOIN users parent
+    ON parent.user_code = ss.written_by
+  LEFT JOIN child c
+    ON c.user_code = parent.user_code
+  LEFT JOIN users mgr
+    ON mgr.user_code = sr.assi_by
+  LEFT JOIN organization org
+    ON org.org_code = mgr.org_code
+  LEFT JOIN case_priority cp
+    ON cp.submit_code = ss.submit_code
+   AND cp.is_current = 'Y'
+  WHERE ra.approval_type = 'AE5'
+  AND (? = '' OR ra.state = ?)
+  AND (
+      ? = '' OR
+      c.child_name   LIKE CONCAT('%', ?, '%') OR
+      parent.name    LIKE CONCAT('%', ?, '%') OR
+      mgr.name       LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+`;
+
+// 🔹 이벤트 계획 승인 요청 목록 (페이징용)
+const eventPlanApprovalList = `
+  SELECT
+      ra.approval_code                      -- 승인코드
+    , e.event_name          AS event_name   -- 이벤트명
+    , mgrUser.name          AS manager_name -- 담당자(메인 매니저, DA1)
+    , org.org_name          AS org_name     -- 기관명
+
+    , e.max_participants    AS max_participants  -- 모집 인원
+    , e.recruit_start_date  AS recruit_start_date
+    , e.recruit_end_date    AS recruit_end_date  -- 모집 기간
+
+    , e.event_start_date    AS event_start_date
+    , e.event_end_date      AS event_end_date    -- 시행 기간
+
+    , ra.state              AS state        -- 요청 상태(BA 코드)
+    , e.event_code          AS event_code   -- 상세 이동용
+  FROM request_approval ra
+
+  /* 이벤트 계획(헤더) */
+  LEFT JOIN event e
+    ON ra.linked_table_name = 'event'
+   AND ra.linked_record_pk  = e.event_code
+
+  /* 기관 */
+  LEFT JOIN organization org
+    ON org.org_code = e.org_code
+
+  /* 메인 매니저(이벤트 담당, DA1) */
+  LEFT JOIN manager m
+    ON m.manager_category      = 'DB2'          -- 이벤트
+   AND m.manager_type          = 'DA1'          -- 메인 매니저
+   AND m.manager_category_code = e.event_code   -- 담당 코드 = 이벤트 코드
+
+  LEFT JOIN users mgrUser
+    ON mgrUser.user_code = m.user_code
+
+  WHERE ra.approval_type = 'AE6'           -- 이벤트 계획 승인요청
+
+  -- 상태 필터
+  AND (? = '' OR ra.state = ?)
+
+  -- 검색어 필터 (이벤트명 / 담당자 / 기관명)
+  AND (
+      ? = '' OR
+      e.event_name   LIKE CONCAT('%', ?, '%') OR
+      mgrUser.name   LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+
+  ORDER BY 
+    CASE WHEN ? = 'latest' THEN ra.request_date END DESC,
+    CASE WHEN ? = 'oldest' THEN ra.request_date END ASC,
+    CASE WHEN ? = 'name'   THEN e.event_name    END ASC,
+
+    ra.request_date DESC,
+    ra.approval_code DESC
+  LIMIT ?, ?
+`;
+
+// 🔢 이벤트 계획 승인 요청 총 개수
+const eventPlanApprovalTotalCount = `
+  SELECT COUNT(*) AS totalCount
+  FROM request_approval ra
+  LEFT JOIN event e
+    ON ra.linked_table_name = 'event'
+   AND ra.linked_record_pk  = e.event_code
+  LEFT JOIN organization org
+    ON org.org_code = e.org_code
+  LEFT JOIN manager m
+    ON m.manager_category      = 'DB2'
+   AND m.manager_type          = 'DA1'
+   AND m.manager_category_code = e.event_code
+  LEFT JOIN users mgrUser
+    ON mgrUser.user_code = m.user_code
+  WHERE ra.approval_type = 'AE6'
+    AND (? = '' OR ra.state = ?)
+    AND (
+      ? = '' OR
+      e.event_name   LIKE CONCAT('%', ?, '%') OR
+      mgrUser.name   LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+    )
+`;
+
+// 🔹 이벤트 결과 승인 요청 목록 (페이징용)
+const eventResultApprovalList = `
+  SELECT
+      ra.approval_code                      -- 승인코드
+    , e.event_name          AS event_name   -- 이벤트명
+    , mgrUser.name          AS manager_name -- 담당자(메인 매니저, DA1)
+    , org.org_name          AS org_name     -- 기관명
+
+    , e.max_participants    AS max_participants  -- 모집 인원
+    , e.recruit_start_date  AS recruit_start_date
+    , e.recruit_end_date    AS recruit_end_date  -- 모집 기간
+
+    , e.event_start_date    AS event_start_date
+    , e.event_end_date      AS event_end_date    -- 시행 기간
+
+    , ra.state              AS state        -- 요청 상태(BA 코드)
+    , er.event_result_code  AS result_code  -- 이벤트 결과 코드 (상세 이동용)
+  FROM request_approval ra
+
+  /* 이벤트 결과 헤더 */
+  LEFT JOIN event_result er
+    ON ra.linked_table_name = 'event_result'
+   AND ra.linked_record_pk  = er.event_result_code
+
+  /* 이벤트 헤더 */
+  LEFT JOIN event e
+    ON e.event_code = er.event_code
+
+  /* 기관 */
+  LEFT JOIN organization org
+    ON org.org_code = e.org_code
+
+  /* 메인 매니저(이벤트 담당, DA1) */
+  LEFT JOIN manager m
+    ON m.manager_category      = 'DB2'          -- 이벤트
+   AND m.manager_type          = 'DA1'          -- 메인 매니저
+   AND m.manager_category_code = e.event_code   -- 담당 코드 = 이벤트 코드
+
+  LEFT JOIN users mgrUser
+    ON mgrUser.user_code = m.user_code
+
+  WHERE ra.approval_type = 'AE7'           -- 이벤트 결과 승인요청
+
+  -- 상태 필터
+  AND (? = '' OR ra.state = ?)
+
+  -- 검색어 필터 (이벤트명 / 담당자 / 기관명)
+  AND (
+      ? = '' OR
+      e.event_name   LIKE CONCAT('%', ?, '%') OR
+      mgrUser.name   LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+  )
+
+  ORDER BY 
+    CASE WHEN ? = 'latest' THEN ra.request_date END DESC,
+    CASE WHEN ? = 'oldest' THEN ra.request_date END ASC,
+    CASE WHEN ? = 'name'   THEN e.event_name    END ASC,
+
+    ra.request_date DESC,
+    ra.approval_code DESC
+  LIMIT ?, ?
+`;
+
+// 🔢 이벤트 결과 승인 요청 총 개수
+const eventResultApprovalTotalCount = `
+  SELECT COUNT(*) AS totalCount
+  FROM request_approval ra
+  LEFT JOIN event_result er
+    ON ra.linked_table_name = 'event_result'
+   AND ra.linked_record_pk  = er.event_result_code
+  LEFT JOIN event e
+    ON e.event_code = er.event_code
+  LEFT JOIN organization org
+    ON org.org_code = e.org_code
+  LEFT JOIN manager m
+    ON m.manager_category      = 'DB2'
+   AND m.manager_type          = 'DA1'
+   AND m.manager_category_code = e.event_code
+  LEFT JOIN users mgrUser
+    ON mgrUser.user_code = m.user_code
+  WHERE ra.approval_type = 'AE7'
+    AND (? = '' OR ra.state = ?)
+    AND (
+      ? = '' OR
+      e.event_name   LIKE CONCAT('%', ?, '%') OR
+      mgrUser.name   LIKE CONCAT('%', ?, '%') OR
+      org.org_name   LIKE CONCAT('%', ?, '%')
+    )
+`;
+
 module.exports = {
   managerApprovalList,
   updateApprovalState,
   findApprovalWithUser,
   staffApprovalList,
   activateUserByApproval,
+  priorityApprovalList,
+  supportPlanApprovalList,
+  supportPlanApprovalTotalCount,
+  priorityApprovalTotalCount,
+  supportResultApprovalList,
+  supportResultApprovalTotalCount,
+  eventPlanApprovalList,
+  eventPlanApprovalTotalCount,
+  eventResultApprovalList,
+  eventResultApprovalTotalCount,
 };

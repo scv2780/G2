@@ -12,10 +12,10 @@ router.get("/", async (req, res) => {
   try {
     // 클라이언트에서 보낸 쿼리 파라미터(searchParams)를 req.query로 받습니다.
     const searchParams = req.query;
-    console.log("Route Layer | 검색 파라미터:", searchParams);
 
     // 파라미터가 있으면 조건 검색, 없으면 전체 검색을 서비스에서 처리합니다.
     const serviceSponsor = await sponsorUsersList(searchParams);
+    console.log("Route Layer | 검색 파라미터:", serviceSponsor);
     console.log("[ sponsorRoute.js || 전체/조건 조회 성공]");
     res.status(200).json({
       status: "success",

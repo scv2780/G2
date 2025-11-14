@@ -190,10 +190,395 @@ async function updateApprovalStateForStaff({ approvalCode, nextState }) {
   }
 }
 
+// 우선순위 승인 요청 목록 조회 (페이징 + 검색/정렬)
+async function priorityApprovalList({ page, size, keyword, state, orderBy }) {
+  const conn = await pool.getConnection();
+  try {
+    const st = state || "";
+    const kw = keyword || "";
+    const ob = orderBy || "latest";
+
+    const pageNum = Number(page) > 0 ? Number(page) : 1;
+    const sizeNum = Number(size) > 0 ? Number(size) : 20;
+    const offset = (pageNum - 1) * sizeNum;
+
+    // ✅ SQL에서 기대하는 파라미터 순서와 정확히 맞춰야 함
+    const params = [
+      st,
+      st, // 상태 필터
+
+      kw,
+      kw,
+      kw,
+      kw,
+      kw, // 검색어 필터 (child, parent, mgr, org)
+
+      ob, // orderBy for latest
+      ob, // orderBy for oldest
+      ob, // orderBy for name
+      ob, // orderBy for priority
+
+      offset,
+      sizeNum,
+    ];
+
+    const retRows = await conn.query(approvalSQL.priorityApprovalList, params);
+    const rows = rowsFrom(retRows);
+
+    // totalCount도 상태/검색어 필터를 동일하게 사용
+    const countParams = [st, st, kw, kw, kw, kw, kw];
+
+    const retCount = await conn.query(
+      approvalSQL.priorityApprovalTotalCount,
+      countParams
+    );
+    const countRows = rowsFrom(retCount);
+    const totalCount = countRows[0]?.totalCount || 0;
+
+    console.log(
+      "[approvalMapper] priorityApprovalList rows:",
+      rows.length,
+      "| state:",
+      st,
+      "| keyword:",
+      kw,
+      "| orderBy:",
+      ob,
+      "| page:",
+      pageNum,
+      "| size:",
+      sizeNum,
+      "| totalCount:",
+      totalCount
+    );
+
+    return {
+      rows,
+      totalCount,
+      page: pageNum,
+      size: sizeNum,
+    };
+  } finally {
+    conn.release();
+  }
+}
+
+// 지원계획 승인 요청 목록 조회 (페이징 + 검색/정렬)
+async function supportPlanApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  const conn = await pool.getConnection();
+  try {
+    const st = state || "";
+    const kw = keyword || "";
+    const ob = orderBy || "latest";
+
+    const pageNum = Number(page) > 0 ? Number(page) : 1;
+    const sizeNum = Number(size) > 0 ? Number(size) : 20;
+    const offset = (pageNum - 1) * sizeNum;
+
+    const params = [
+      st,
+      st, // 상태 필터
+
+      kw,
+      kw,
+      kw,
+      kw,
+      kw, // 검색어 필터
+
+      ob, // latest
+      ob, // oldest
+      ob, // name
+      ob, // priority
+
+      offset,
+      sizeNum,
+    ];
+
+    const retRows = await conn.query(
+      approvalSQL.supportPlanApprovalList,
+      params
+    );
+    const rows = rowsFrom(retRows);
+
+    const countParams = [st, st, kw, kw, kw, kw, kw];
+
+    const retCount = await conn.query(
+      approvalSQL.supportPlanApprovalTotalCount,
+      countParams
+    );
+    const countRows = rowsFrom(retCount);
+    const totalCount = countRows[0]?.totalCount || 0;
+
+    console.log(
+      "[approvalMapper] supportPlanApprovalList rows:",
+      rows.length,
+      "| state:",
+      st,
+      "| keyword:",
+      kw,
+      "| orderBy:",
+      ob,
+      "| page:",
+      pageNum,
+      "| size:",
+      sizeNum,
+      "| totalCount:",
+      totalCount
+    );
+
+    return {
+      rows,
+      totalCount,
+      page: pageNum,
+      size: sizeNum,
+    };
+  } finally {
+    conn.release();
+  }
+}
+
+// 🔹 지원결과 승인 요청 목록 조회 (페이징 + 검색/정렬)
+async function supportResultApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  const conn = await pool.getConnection();
+  try {
+    const st = state || "";
+    const kw = keyword || "";
+    const ob = orderBy || "latest";
+
+    const pageNum = Number(page) > 0 ? Number(page) : 1;
+    const sizeNum = Number(size) > 0 ? Number(size) : 20;
+    const offset = (pageNum - 1) * sizeNum;
+
+    const params = [
+      st,
+      st, // 상태 필터
+
+      kw,
+      kw,
+      kw,
+      kw,
+      kw, // 검색어 필터 (child, parent, mgr, org)
+
+      ob, // latest
+      ob, // oldest
+      ob, // name
+      ob, // priority
+
+      offset,
+      sizeNum,
+    ];
+
+    const retRows = await conn.query(
+      approvalSQL.supportResultApprovalList,
+      params
+    );
+    const rows = rowsFrom(retRows);
+
+    const countParams = [st, st, kw, kw, kw, kw, kw];
+
+    const retCount = await conn.query(
+      approvalSQL.supportResultApprovalTotalCount,
+      countParams
+    );
+    const countRows = rowsFrom(retCount);
+    const totalCount = countRows[0]?.totalCount || 0;
+
+    console.log(
+      "[approvalMapper] supportResultApprovalList rows:",
+      rows.length,
+      "| state:",
+      st,
+      "| keyword:",
+      kw,
+      "| orderBy:",
+      ob,
+      "| page:",
+      pageNum,
+      "| size:",
+      sizeNum,
+      "| totalCount:",
+      totalCount
+    );
+
+    return {
+      rows,
+      totalCount,
+      page: pageNum,
+      size: sizeNum,
+    };
+  } finally {
+    conn.release();
+  }
+}
+
+// 🔹 이벤트 계획 승인 요청 목록 조회 (페이징 + 검색/정렬)
+async function eventPlanApprovalList({ page, size, keyword, state, orderBy }) {
+  const conn = await pool.getConnection();
+  try {
+    const st = state || "";
+    const kw = keyword || "";
+    const ob = orderBy || "latest";
+
+    const pageNum = Number(page) > 0 ? Number(page) : 1;
+    const sizeNum = Number(size) > 0 ? Number(size) : 20;
+    const offset = (pageNum - 1) * sizeNum;
+
+    const params = [
+      st,
+      st, // 상태 필터
+
+      kw,
+      kw,
+      kw,
+      kw, // 검색어 필터 (이벤트명 / 담당자 / 기관명)
+
+      ob, // latest
+      ob, // oldest
+      ob, // name
+
+      offset,
+      sizeNum,
+    ];
+
+    const retRows = await conn.query(approvalSQL.eventPlanApprovalList, params);
+    const rows = rowsFrom(retRows);
+
+    const countParams = [st, st, kw, kw, kw, kw];
+
+    const retCount = await conn.query(
+      approvalSQL.eventPlanApprovalTotalCount,
+      countParams
+    );
+    const countRows = rowsFrom(retCount);
+    const totalCount = countRows[0]?.totalCount || 0;
+
+    console.log(
+      "[approvalMapper] eventPlanApprovalList rows:",
+      rows.length,
+      "| state:",
+      st,
+      "| keyword:",
+      kw,
+      "| orderBy:",
+      ob,
+      "| page:",
+      pageNum,
+      "| size:",
+      sizeNum,
+      "| totalCount:",
+      totalCount
+    );
+
+    return {
+      rows,
+      totalCount,
+      page: pageNum,
+      size: sizeNum,
+    };
+  } finally {
+    conn.release();
+  }
+}
+
+// 🔹 이벤트 결과 승인 요청 목록 조회 (페이징 + 검색/정렬)
+async function eventResultApprovalList({
+  page,
+  size,
+  keyword,
+  state,
+  orderBy,
+}) {
+  const conn = await pool.getConnection();
+  try {
+    const st = state || "";
+    const kw = keyword || "";
+    const ob = orderBy || "latest";
+
+    const pageNum = Number(page) > 0 ? Number(page) : 1;
+    const sizeNum = Number(size) > 0 ? Number(size) : 20;
+    const offset = (pageNum - 1) * sizeNum;
+
+    const params = [
+      st,
+      st, // 상태 필터
+
+      kw,
+      kw,
+      kw,
+      kw, // 검색어 필터 (이벤트명 / 담당자 / 기관명)
+
+      ob, // latest
+      ob, // oldest
+      ob, // name
+
+      offset,
+      sizeNum,
+    ];
+
+    const retRows = await conn.query(
+      approvalSQL.eventResultApprovalList,
+      params
+    );
+    const rows = rowsFrom(retRows);
+
+    const countParams = [st, st, kw, kw, kw, kw];
+
+    const retCount = await conn.query(
+      approvalSQL.eventResultApprovalTotalCount,
+      countParams
+    );
+    const countRows = rowsFrom(retCount);
+    const totalCount = countRows[0]?.totalCount || 0;
+
+    console.log(
+      "[approvalMapper] eventResultApprovalList rows:",
+      rows.length,
+      "| state:",
+      st,
+      "| keyword:",
+      kw,
+      "| orderBy:",
+      ob,
+      "| page:",
+      pageNum,
+      "| size:",
+      sizeNum,
+      "| totalCount:",
+      totalCount
+    );
+
+    return {
+      rows,
+      totalCount,
+      page: pageNum,
+      size: sizeNum,
+    };
+  } finally {
+    conn.release();
+  }
+}
+
 module.exports = {
   managerApprovalList,
   updateApprovalState,
   findApprovalWithUser,
   staffApprovalList,
   updateApprovalStateForStaff,
+  priorityApprovalList,
+  supportPlanApprovalList,
+  supportResultApprovalList,
+  eventPlanApprovalList,
+  eventResultApprovalList,
 };

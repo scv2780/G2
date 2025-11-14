@@ -15,13 +15,19 @@
         class="header-button-group d-flex justify-content-center align-items-center gap-3 flex-grow-1"
       >
         <router-link to="/test" class="btn btn-outline-primary btn-sm"
-          >버튼1</router-link
+          >대기자</router-link
         >
         <router-link to="/test" class="btn btn-outline-info btn-sm"
-          >버튼2</router-link
+          >조사지</router-link
         >
         <router-link to="/test" class="btn btn-outline-success btn-sm"
-          >버튼3</router-link
+          >상담</router-link
+        >
+        <router-link to="/sponsor" class="btn btn-outline-success btn-sm"
+          >후원</router-link
+        >
+        <router-link to="/test" class="btn btn-outline-success btn-sm"
+          >이벤트</router-link
         >
       </div>
 
@@ -36,9 +42,10 @@
           <ul class="navbar-nav justify-content-end">
             <!-- 로그인 아이콘 -->
             <li class="nav-item d-flex align-items-center">
-              <router-link
+              <div
                 :to="{ name: 'SignIn' }"
                 class="px-0 nav-link font-weight-bold lh-1"
+                @click="loginCheck"
                 :class="color ? color : 'text-body'"
               >
                 <i
@@ -47,7 +54,7 @@
                 >
                   account_circle
                 </i>
-              </router-link>
+              </div>
             </li>
 
             <!-- 모바일 사이드바 토글 -->
@@ -216,30 +223,44 @@
 <script>
 import Breadcrumbs from '../Breadcrumbs.vue';
 import { mapMutations, mapState } from 'vuex';
+import { useAuthStore } from '@/store/authLogin';
 
 export default {
-  name: 'navbar',
+  name: "navbar",
   data() {
     return {
       showMenu: false,
     };
   },
-  props: ['minNav', 'color'],
+  props: ["minNav", "color"],
   created() {
     this.minNav;
   },
   methods: {
-    ...mapMutations(['navbarMinimize', 'toggleConfigurator']),
+    ...mapMutations(["navbarMinimize", "toggleConfigurator"]),
 
     toggleSidebar() {
       this.navbarMinimize();
+    },
+
+    loginCheck() {
+      const piniaLogin = useAuthStore();
+
+      if (piniaLogin.isLogin) {
+        piniaLogin.logout();
+        alert('로그아웃 완료');
+        this.$router.push({ name: 'SignIn' });
+        return;
+      }
+
+      this.$router.push({ name: 'SignIn' });
     },
   },
   components: {
     Breadcrumbs,
   },
   computed: {
-    ...mapState(['isRTL', 'isAbsolute']),
+    ...mapState(["isRTL", "isAbsolute"]),
 
     currentRouteName() {
       return this.$route.name;

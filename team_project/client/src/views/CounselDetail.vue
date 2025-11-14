@@ -18,9 +18,9 @@
           ← 목록으로
         </MaterialButton>
 
-        <!-- BEFORE → 작성하기 (담당자만) -->
+        <!-- BEFORE → 작성하기 (담당자만 / CB1, CB2) -->
         <MaterialButton
-          v-if="role === 2 && status === 'BEFORE'"
+          v-if="role === 2 && (status === 'CB1' || status === 'CB2')"
           color="dark"
           size="sm"
           @click="goWrite"
@@ -28,14 +28,24 @@
           작성하기
         </MaterialButton>
 
-        <!-- REQ → 수정하기 (담당자만) -->
+        <!-- REQ → 수정하기 (담당자만 / CB3) -->
         <MaterialButton
-          v-else-if="role === 2 && status === 'REQ'"
+          v-else-if="role === 2 && status === 'CB3'"
           color="dark"
           size="sm"
           @click="goEdit"
         >
           수정하기
+        </MaterialButton>
+
+        <!-- 🔥 CB4 → 재수정하기 (반려 시 담당자 전용) -->
+        <MaterialButton
+          v-else-if="role === 2 && status === 'CB4'"
+          color="dark"
+          size="sm"
+          @click="goEdit"
+        >
+          재수정하기
         </MaterialButton>
       </div>
     </header>
@@ -46,7 +56,7 @@
 
     <!-- 본문 -->
     <template v-else>
-      <!-- 기본정보 -->
+      <!-- 기본정보 (상태와 관계없이 항상 표시) -->
       <div class="border rounded p-4 bg-gray-50 space-y-3">
         <div class="grid grid-cols-2 text-sm gap-2">
           <div>
@@ -56,9 +66,9 @@
         </div>
 
         <div class="flex items-center gap-6 text-sm">
-          <button class="text-blue-600 underline" @click="openSubmissionDetail">
+          <MaterialButton color="dark" size="sm" @click="openSubmissionDetail">
             조사지 제출일: {{ formattedSubmitAt }}
-          </button>
+          </MaterialButton>
 
           <div class="flex items-center gap-2">
             <span class="text-gray-500">우선순위:</span>
@@ -67,49 +77,41 @@
         </div>
       </div>
 
-      <!-- 메인 상담 -->
-      <div class="border rounded p-4 bg-white space-y-3">
-        <h3 class="font-semibold text-lg">주요 상담</h3>
+      <!-- ✅ CB1 / CB2 일 때: 내용 숨기고 안내만 -->
+      <div
+        v-if="status === 'CB1' || status === 'CB2'"
+        class="text-sm text-gray-500 mt-4"
+      >
+        <template v-if="status === 'CB1'">
+          이 상담은 <strong>임시 저장</strong> 상태입니다.<br />
+          작성 중인 상담 내용은
+          <span class="font-semibold">[작성하기]</span> 화면에서만 확인·수정할
+          수 있습니다.
+        </template>
 
-        <div class="text-sm text-gray-600">
-          상담일: <span class="font-medium">{{ mainForm.counselDate }}</span>
-        </div>
-
-        <div>
-          <div class="text-sm text-gray-500 mb-1">상담 제목</div>
-          <div class="border rounded px-3 py-2 bg-gray-50">
-            {{ mainForm.title || "-" }}
-          </div>
-        </div>
-
-        <div>
-          <div class="text-sm text-gray-500 mb-1">상담 내용</div>
-          <div class="border rounded px-3 py-2 bg-gray-50 whitespace-pre-line">
-            {{ mainForm.content || "-" }}
-          </div>
-        </div>
+        <template v-else>
+          이 상담은 아직 <strong>작성 전</strong> 상태입니다.<br />
+          상담 내용은
+          <span class="font-semibold">[작성하기]</span> 버튼을 눌러 작성해
+          주세요.
+        </template>
       </div>
 
-      <!-- 추가 상담 기록 -->
-      <div v-if="records.length" class="space-y-4">
-        <h3 class="font-semibold text-lg">추가 상담 기록</h3>
+      <!-- ✅ CB1/CB2 가 아닐 때: 실제 상담 내용 / 기록 / 승인/반려 노출 -->
+      <template v-else>
+        <!-- 메인 상담 -->
+        <div class="border rounded p-4 bg-white space-y-3">
+          <h3 class="font-semibold text-lg">주요 상담</h3>
 
-        <div
-          v-for="(record, idx) in records"
-          :key="record.id || idx"
-          class="border rounded p-4 bg-white space-y-3"
-        >
-          <div class="flex justify-between items-center text-sm">
-            <div class="font-medium">기록 #{{ idx + 1 }}</div>
-            <div class="text-gray-500">
-              상담일: <span class="font-medium">{{ record.counselDate }}</span>
-            </div>
+          <div class="text-sm text-gray-600">
+            상담일:
+            <span class="font-medium">{{ mainForm.counselDate }}</span>
           </div>
 
           <div>
             <div class="text-sm text-gray-500 mb-1">상담 제목</div>
             <div class="border rounded px-3 py-2 bg-gray-50">
-              {{ record.title || "-" }}
+              {{ mainForm.title || "-" }}
             </div>
           </div>
 
@@ -118,23 +120,89 @@
             <div
               class="border rounded px-3 py-2 bg-gray-50 whitespace-pre-line"
             >
-              {{ record.content || "-" }}
+              {{ mainForm.content || "-" }}
+            </div>
+          </div>
+
+          <!-- 🔹 첨부 파일 영역 -->
+          <div class="mt-3">
+            <div class="text-sm text-gray-500 mb-1">첨부 파일</div>
+
+            <div v-if="attachments.length">
+              <ul class="list-disc pl-4 text-sm">
+                <li
+                  v-for="file in attachments"
+                  :key="file.attachCode"
+                  class="text-blue-600"
+                >
+                  <a
+                    :href="file.url"
+                    target="_blank"
+                    class="hover:underline break-all"
+                  >
+                    {{ file.originalFilename }}
+                  </a>
+                </li>
+              </ul>
+            </div>
+            <div v-else class="text-xs text-gray-400">
+              첨부된 파일이 없습니다.
             </div>
           </div>
         </div>
-      </div>
 
-      <div v-else class="text-sm text-gray-500">추가 상담 기록이 없습니다.</div>
+        <!-- 추가 상담 기록 -->
+        <div v-if="records.length" class="space-y-4">
+          <h3 class="font-semibold text-lg">추가 상담 기록</h3>
 
-      <!-- 🔥 관리자(3) 전용 승인/반려 버튼 영역 -->
-      <div v-if="role === 3" class="flex justify-end gap-3 pt-4 border-t mt-4">
-        <MaterialButton color="dark" size="sm" @click="handleApprove">
-          승인
-        </MaterialButton>
-        <MaterialButton color="dark" size="sm" @click="handleReject">
-          반려
-        </MaterialButton>
-      </div>
+          <div
+            v-for="(record, idx) in records"
+            :key="record.id || idx"
+            class="border rounded p-4 bg-white space-y-3"
+          >
+            <div class="flex justify-between items-center text-sm">
+              <div class="font-medium">기록 #{{ idx + 1 }}</div>
+              <div class="text-gray-500">
+                상담일:
+                <span class="font-medium">{{ record.counselDate }}</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="text-sm text-gray-500 mb-1">상담 제목</div>
+              <div class="border rounded px-3 py-2 bg-gray-50">
+                {{ record.title || "-" }}
+              </div>
+            </div>
+
+            <div>
+              <div class="text-sm text-gray-500 mb-1">상담 내용</div>
+              <div
+                class="border rounded px-3 py-2 bg-gray-50 whitespace-pre-line"
+              >
+                {{ record.content || "-" }}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div v-else class="text-sm text-gray-500">
+          추가 상담 기록이 없습니다.
+        </div>
+
+        <!-- 🔥 관리자(3) 전용 승인/반려 버튼 영역 -->
+        <div
+          v-if="role === 3 && (status === 'CB3' || status === 'CB6')"
+          class="flex justify-end gap-3 pt-4 border-t mt-4"
+        >
+          <MaterialButton color="dark" size="sm" @click="handleApprove">
+            승인
+          </MaterialButton>
+          <MaterialButton color="dark" size="sm" @click="handleReject">
+            반려
+          </MaterialButton>
+        </div>
+      </template>
     </template>
 
     <!-- 🔻 반려 사유 입력 모달 -->
@@ -177,6 +245,7 @@ const submitCode = Number(route.params.submitCode);
 
 const loading = ref(false);
 const error = ref("");
+const attachments = ref([]); // 🔹 첨부파일 목록
 
 // 쿼리로 넘어온 role (2: 담당자, 3: 관리자, 4: 시스템)
 const role = computed(() => Number(route.query.role || 0));
@@ -187,7 +256,10 @@ const submitInfo = ref({
   submitAt: "",
 });
 
-const formattedSubmitAt = computed(() => submitInfo.value.submitAt || "-");
+const formattedSubmitAt = computed(() => {
+  const v = submitInfo.value.submitAt;
+  return v ? v.slice(0, 10) : "-";
+});
 
 const mainForm = ref({
   counselDate: "",
@@ -231,6 +303,9 @@ async function loadData() {
         title: d.title || "",
         content: d.content || "",
       })) || [];
+
+    // 🔹 첨부파일 세팅
+    attachments.value = res.attachments || [];
   } catch (e) {
     console.error(e);
     error.value = e.message || "상담 정보 조회 중 오류";
@@ -307,6 +382,7 @@ function closeRejectModal() {
 
 loadData();
 </script>
+
 <style scoped>
 .modal-overlay {
   position: fixed;

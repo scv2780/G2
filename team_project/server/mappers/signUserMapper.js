@@ -18,49 +18,8 @@ async function findUserId(id) {
 // 개인 회원가입
 async function addUser(data) {
   try {
-    const values = [
+    const userData = [
       data.org_code || null,
-      data.userId,
-      data.userPw,
-      'USER', // 개인 or 기관
-      data.name,
-      data.ssn,
-      data.phone,
-      data.address,
-      data.email,
-      1, // is_active(승인 여부)
-      0, // 로그인 실패 횟수
-      data.joinDate, // 가입일
-    ];
-
-    await pool.query(signUserSQL.INSERT_USER, values);
-
-    return { ok: true, message: '회원가입 완료' };
-  } catch (err) {
-    console.error('[ addUser 실패 ] : ', err);
-    throw err;
-  }
-}
-
-// 기관 code 가져오기
-async function findOrgCode(orgName) {
-  try {
-    const [rows] = await pool.query(signUserSQL.FIND_ORG_CODE, [orgName]);
-    if (rows.length == 0) {
-      return null;
-    }
-    return rows[0].org_code;
-  } catch (err) {
-    console.error('[ findOrgCode 찾기 실패 ] : ', err);
-    throw err;
-  }
-}
-
-// 기관 회원가입
-async function addOrg(data) {
-  try {
-    const values = [
-      data.org_code,
       data.userId,
       data.userPw,
       data.role,
@@ -74,7 +33,49 @@ async function addOrg(data) {
       data.joinDate, // 가입일
     ];
 
-    await pool.query(signUserSQL.INSERT_USER, values);
+    await pool.query(signUserSQL.INSERT_USER, userData);
+
+    return { ok: true, message: '회원가입 완료' };
+  } catch (err) {
+    console.error('[ addUser 실패 ] : ', err);
+    throw err;
+  }
+}
+
+// 기관 code 가져오기
+async function findOrgCode(orgName) {
+  try {
+    const rows = await pool.query(signUserSQL.FIND_ORG_CODE, [orgName]);
+    if (rows.length == 0) {
+      return null;
+    }
+    return rows[0].org_code;
+  } catch (err) {
+    console.error('[ findOrgCode 찾기 실패 ] : ', err);
+    throw err;
+  }
+}
+
+// 기관 회원가입
+async function addOrg(data) {
+  try {
+    const userData = [
+      data.org_code,
+      data.userId,
+      data.userPw,
+      data.role,
+      data.name,
+      data.ssn,
+      data.phone,
+      data.address,
+      data.email,
+      data.department,
+      1, // is_active(승인 여부)
+      0, // 로그인 실패 횟수
+      data.joinDate, // 가입일
+    ];
+
+    await pool.query(signUserSQL.INSERT_USER, userData);
 
     return { ok: true, message: '기관 회원가입 완료' };
   } catch (err) {
@@ -83,14 +84,28 @@ async function addOrg(data) {
   }
 }
 
-async function searchOrgByName(keyword) {
+// 로그인
+async function authLogin(data) {
   try {
-    const [rows] = await pool.query(signUserSQL.SEARCH_ORG, [keyword]);
-    return rows; // ex: [{ org_name: '행복센터' }, ...]
+    const result = await pool.query(signUserSQL.AUTH_LOGIN, [
+      data.userId,
+      data.userPw,
+    ]);
+    if (result.length == 0) {
+      console.log('값 없음');
+      return { ok: false, message: '로그인 실패' };
+    }
+    return { ok: true, message: '로그인 성공', ...result[0] };
   } catch (err) {
-    console.error('[ searchOrgByName 실패 ]', err);
+    console.error('[ authLogin 실패 ]', err);
     throw err;
   }
 }
 
-module.exports = { findUserId, addUser, findOrgCode, addOrg, searchOrgByName };
+module.exports = {
+  findUserId,
+  addUser,
+  findOrgCode,
+  addOrg,
+  authLogin,
+};

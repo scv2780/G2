@@ -37,7 +37,7 @@
 
     <!-- 상담 제목 / 내용 -->
     <div class="space-y-4">
-      <!-- 상담 제목: MaterialInput -->
+      <!-- 상담 제목 -->
       <div>
         <label class="block text-sm mb-1 font-medium">상담 제목</label>
         <MaterialInput
@@ -49,7 +49,7 @@
         />
       </div>
 
-      <!-- 상담 내용: MaterialTextarea -->
+      <!-- 상담 내용 -->
       <div>
         <label class="block text-sm mb-1 font-medium">상담 내용</label>
         <MaterialTextarea
@@ -61,9 +61,48 @@
           @input="(e) => (mainForm.content = e.target.value)"
         />
       </div>
+
+      <!-- ✅ 첨부 파일 영역 -->
+      <div>
+        <label class="block text-sm mb-1 font-medium">첨부 파일</label>
+        <input
+          ref="fileInputRef"
+          type="file"
+          multiple
+          @change="onMainFilesChange"
+          class="block w-full text-sm"
+        />
+        <p class="mt-1 text-xs text-gray-500">
+          * 여러 개 파일을 한 번에 선택하거나, 나눠서 여러 번 선택할 수
+          있습니다.
+        </p>
+
+        <!-- 선택된 파일 목록 -->
+        <ul
+          v-if="mainFiles.length"
+          class="mt-2 text-xs text-gray-700 space-y-1"
+        >
+          <li
+            v-for="(file, idx) in mainFiles"
+            :key="file.name + '_' + file.lastModified + '_' + idx"
+            class="flex items-center justify-between gap-2"
+          >
+            <span class="truncate">
+              • {{ file.name }} ({{ (file.size / 1024).toFixed(1) }} KB)
+            </span>
+            <button
+              type="button"
+              class="shrink-0 px-2 py-0.5 border rounded text-[11px] text-gray-600 hover:bg-gray-100"
+              @click="removeMainFile(idx)"
+            >
+              삭제
+            </button>
+          </li>
+        </ul>
+      </div>
     </div>
 
-    <!-- 버튼 3종 (상담기록추가 / 우선순위 / 작성완료) -->
+    <!-- 버튼 3종 -->
     <div class="flex justify-between items-center">
       <div class="flex items-center gap-3">
         <MaterialButton color="dark" size="sm" @click="goBack">
@@ -88,7 +127,7 @@
       </div>
     </div>
 
-    <!-- 생성된 상담 기록 입력칸들 -->
+    <!-- 추가 상담 기록 -->
     <div
       v-for="record in records"
       :key="record.id"
@@ -108,13 +147,12 @@
       </div>
 
       <div>
-        <!-- 상담 기록 제목: MaterialInput -->
         <label class="block text-sm mb-1 font-medium">상담 제목</label>
         <MaterialInput
-          id="main-title"
+          :id="`record-title-${record.id}`"
           variant="outline"
           size="default"
-          v-model="mainForm.title"
+          v-model="record.title"
           placeholder="상담 제목을 입력하세요"
         />
       </div>
@@ -135,7 +173,7 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
 
@@ -154,7 +192,10 @@ const submitInfo = ref({
   submitAt: "",
 });
 
-const formattedSubmitAt = computed(() => submitInfo.value.submitAt);
+const formattedSubmitAt = computed(() => {
+  const v = submitInfo.value.submitAt;
+  return v ? v.slice(0, 10) : "-";
+});
 
 // 메인 폼
 const mainForm = ref({
@@ -163,19 +204,138 @@ const mainForm = ref({
   content: "",
 });
 
+// ✅ 메인 상담 첨부 파일들
+const mainFiles = ref([]); // File[]
+const fileInputRef = ref(null); // <input type="file">
+
 // 추가 기록들
 const records = ref([]);
 const priority = ref("계획");
 
-function handleLoad() {
-  console.log("불러오기");
+const loading = ref(false);
+const error = ref("");
+
+// 기본정보 로딩
+async function loadData() {
+  loading.value = true;
+  error.value = "";
+
+  try {
+    const { data } = await axios.get(`/api/counsel/${submitCode}`);
+
+    if (!data?.success || !data.result) {
+      throw new Error(data?.message || "상담 기본 정보를 찾을 수 없습니다.");
+    }
+
+    const res = data.result;
+
+    if (res.submit_info) {
+      submitInfo.value = res.submit_info;
+    }
+  } catch (e) {
+    console.error(e);
+    error.value = e.message || "상담 기본 정보 조회 중 오류";
+  } finally {
+    loading.value = false;
+  }
 }
-function handleTempSave() {
-  console.log("임시 저장");
+
+onMounted(loadData);
+
+// ✅ 파일 변경 핸들러 (기존 + 새 파일 누적)
+function onMainFilesChange(e) {
+  const files = Array.from(e.target.files || []);
+
+  const newOnes = files.filter(
+    (f) =>
+      !mainFiles.value.some(
+        (ex) =>
+          ex.name === f.name &&
+          ex.size === f.size &&
+          ex.lastModified === f.lastModified
+      )
+  );
+
+  mainFiles.value = [...mainFiles.value, ...newOnes];
+
+  // 같은 파일 다시 선택할 수 있도록 초기화
+  if (e.target) {
+    e.target.value = "";
+  }
 }
+
+// ✅ 파일 개별 삭제
+function removeMainFile(index) {
+  mainFiles.value.splice(index, 1);
+}
+
+// 임시 저장 (JSON만)
+async function handleTempSave() {
+  try {
+    const payload = {
+      submitCode,
+      priority: priority.value,
+      mainForm: mainForm.value,
+      records: records.value,
+    };
+
+    const res = await axios.post("/api/counsel/temp", payload);
+
+    if (res.data?.success) {
+      alert("임시 저장이 완료되었습니다.");
+    } else {
+      alert(res.data.message || "임시 저장 실패");
+    }
+  } catch (e) {
+    console.error(e);
+    alert("서버 오류: " + (e.response?.data?.message || e.message));
+  }
+}
+
+async function handleLoad() {
+  try {
+    const { data } = await axios.get(`/api/counsel/${submitCode}`);
+
+    if (!data?.success || !data.result) {
+      alert(data?.message || "불러올 상담 내용이 없습니다.");
+      return;
+    }
+
+    const res = data.result;
+
+    if (res.submit_info) {
+      submitInfo.value = res.submit_info;
+    }
+
+    mainForm.value = {
+      counselDate: res.main?.counsel_date || "",
+      title: res.main?.title || "",
+      content: res.main?.content || "",
+    };
+
+    priority.value = res.priority || "계획";
+
+    records.value =
+      (res.details || []).map((d, idx) => ({
+        id: d.detail_code || Date.now() + idx,
+        counselDate: d.counsel_date || "",
+        title: d.title || "",
+        content: d.content || "",
+      })) || [];
+
+    alert("임시 저장된 내용을 불러왔습니다.");
+  } catch (e) {
+    console.error(e);
+    alert(
+      "상담 내용 불러오기 중 오류: " + (e.response?.data?.message || e.message)
+    );
+  }
+}
+
 function openSubmissionDetail() {
   window.open(`/survey/submission/${submitCode}`, "_blank");
 }
+
 function goBack() {
   router.push({ name: "counselList" });
 }
@@ -207,6 +367,7 @@ function validate() {
   return null;
 }
 
+// ✅ 작성 완료: FormData로 JSON + 파일
 async function submitAll() {
   const err = validate();
   if (err) {
@@ -215,14 +376,25 @@ async function submitAll() {
   }
 
   try {
-    const payload = {
+    const formJson = {
       submitCode,
       priority: priority.value,
       mainForm: mainForm.value,
       records: records.value,
     };
 
-    const res = await axios.post("/api/counsel/new", payload);
+    const formData = new FormData();
+    formData.append("formJson", JSON.stringify(formJson));
+
+    mainFiles.value.forEach((file) => {
+      formData.append("mainFiles", file);
+    });
+
+    const res = await axios.post("/api/counsel/new", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
 
     if (res.data?.success) {
       alert("상담 저장 완료!");

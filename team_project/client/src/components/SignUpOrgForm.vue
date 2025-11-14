@@ -92,8 +92,8 @@
       <label class="form-label"></label>
       <select v-model="role" class="form-control">
         <option disabled value="">권한을 선택하세요</option>
-        <option value="ORG_ADMIN">기관 관리자</option>
-        <option value="ORG_STAFF">기관 직원</option>
+        <option value="AA3">기관 담당자</option>
+        <option value="AA2">기관 관리자</option>
       </select>
     </div>
 
@@ -171,7 +171,6 @@ export default {
       email: '',
       org_name: '',
       department: '',
-      position: '',
       role: '',
       emailSent: false,
     };
@@ -199,15 +198,29 @@ export default {
         return alert('이름과 기관명을 입력하세요.');
       }
 
+      let formattedPhone = '';
+      if (this.phone.length === 10) {
+        formattedPhone = `${this.phone.slice(0, 3)}-${this.phone.slice(
+          3,
+          6
+        )}-${this.phone.slice(6)}`;
+      } else if (this.phone.length === 11) {
+        formattedPhone = `${this.phone.slice(0, 3)}-${this.phone.slice(
+          3,
+          7
+        )}-${this.phone.slice(7)}`;
+      } else {
+        return alert('전화번호는 10~11자리 숫자로 입력하세요.');
+      }
+
       this.$emit('submit', {
         name: this.name,
         ssn: `${this.regFront}-${this.regBack}`,
-        phone: this.phone,
+        phone: formattedPhone,
         address: this.address,
         email: this.email,
         org_name: this.org_name,
         department: this.department,
-        position: this.position,
         role: this.role,
       });
     },

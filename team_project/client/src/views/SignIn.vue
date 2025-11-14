@@ -11,14 +11,17 @@
       <div class="row">
         <div class="col-lg-4 col-md-8 col-12 mx-auto">
           <div class="card z-index-0 fadeIn3 fadeInBottom">
+            <!-- 로그인 헤더 -->
             <div class="card-header p-0 position-relative mt-n4 mx-3 z-index-2">
               <div
                 class="bg-gradient-success shadow-success border-radius-lg py-3 pe-1"
               >
                 <h4 class="text-white font-weight-bolder text-center mt-2 mb-0">
-                  Sign in
+                  나는 문어 꿈을 꾸는 문어
                 </h4>
-                <div class="row mt-3">
+
+                <!-- 소셜 로그인 버튼 -->
+                <!-- <div class="row mt-3">
                   <div class="col-2 text-center ms-auto">
                     <a class="btn btn-link px-3" href="javascript:;">
                       <i class="fab fa-facebook text-white text-lg"></i>
@@ -34,45 +37,52 @@
                       <i class="fab fa-google text-white text-lg"></i>
                     </a>
                   </div>
-                </div>
+                </div> -->
               </div>
             </div>
+
+            <!-- 로그인 바디 -->
             <div class="card-body">
+              <!-- form -->
               <form role="form" class="text-start mt-3">
                 <div class="mb-3">
                   <material-input
-                    id="email"
-                    type="email"
-                    label="Email"
-                    name="email"
+                    id="userId"
+                    type="text"
+                    label="나는 아이디"
+                    name="userId"
+                    v-model="userId"
                   />
                 </div>
                 <div class="mb-3">
                   <material-input
-                    id="password"
+                    id="userPw"
                     type="password"
-                    label="Password"
-                    name="password"
+                    label="나는 비밀번호"
+                    name="userPw"
+                    v-model="userPw"
                   />
                 </div>
-                <material-switch id="rememberMe" name="rememberMe"
+                <!-- <material-switch id="rememberMe" name="rememberMe"
                   >Remember me</material-switch
-                >
+                > -->
                 <div class="text-center">
                   <material-button
                     class="my-4 mb-2"
                     variant="gradient"
                     color="success"
                     fullWidth
-                    >Sign in</material-button
+                    type="button"
+                    @click="login"
+                    >나는 버튼</material-button
                   >
                 </div>
                 <p class="mt-4 text-sm text-center">
-                  Don't have an account?
+                  계정이 없어요?
                   <router-link
                     :to="{ name: 'SignUp' }"
                     class="text-success text-gradient font-weight-bold"
-                    >Sign up</router-link
+                    >지금 당장 회원가입</router-link
                   >
                 </p>
               </form>
@@ -142,19 +152,26 @@
 </template>
 
 <script>
-import Navbar from "@/examples/PageLayout/Navbar.vue";
-import MaterialInput from "@/components/MaterialInput.vue";
-import MaterialSwitch from "@/components/MaterialSwitch.vue";
-import MaterialButton from "@/components/MaterialButton.vue";
-import { mapMutations } from "vuex";
+import Navbar from '@/examples/PageLayout/Navbar.vue';
+import MaterialInput from '@/components/MaterialInput.vue';
+// import MaterialSwitch from '@/components/MaterialSwitch.vue';
+import MaterialButton from '@/components/MaterialButton.vue';
+import { mapMutations } from 'vuex';
+import { useAuthStore } from '../store/authLogin';
 
 export default {
-  name: "sign-in",
+  name: 'sign-in',
   components: {
     Navbar,
     MaterialInput,
-    MaterialSwitch,
+    // MaterialSwitch,
     MaterialButton,
+  },
+  data() {
+    return {
+      userId: '',
+      userPw: '',
+    };
   },
   beforeMount() {
     this.toggleEveryDisplay();
@@ -165,7 +182,27 @@ export default {
     this.toggleHideConfig();
   },
   methods: {
-    ...mapMutations(["toggleEveryDisplay", "toggleHideConfig"]),
+    async login() {
+      if (!this.userId || !this.userPw) {
+        alert('아이디 및 비밀번호 입력해주세요');
+        return;
+      }
+
+      const piniaLogin = useAuthStore();
+
+      try {
+        const result = await piniaLogin.login({
+          userId: this.userId,
+          userPw: this.userPw,
+        });
+
+        alert(`반갑습니다 ${result.user_id}(${result.role})님`);
+        this.$router.push({ name: 'dashboard' });
+      } catch (err) {
+        alert('로그인 실패: 아이디 및 패스워드 틀림');
+      }
+    },
+    ...mapMutations(['toggleEveryDisplay', 'toggleHideConfig']),
   },
 };
 </script>

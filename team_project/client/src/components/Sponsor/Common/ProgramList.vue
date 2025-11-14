@@ -17,7 +17,7 @@
         <select name="program_select" id="program_select" v-model="programCode">
           <option value="" selected>-- 전체 프로그램 --</option>
           <option
-            v-for="program in sponsorList"
+            v-for="program in programList"
             :key="program.program_code"
             :value="program.program_code"
           >
@@ -37,10 +37,18 @@
           class="inputBox"
           oninput="this.value = this.value.replace(/[^0-9.,]/g, '').replace(/(\..*)\./g, '$1');"
         /> -->
-        <span>승인</span>
+        <span>진행</span>
         <select name="" id="" v-model="status">
           <option value="" selected>-- 전체 --</option>
-          <option value="요청전">요청전</option>
+          <option value="집행전">집행전</option>
+          <option value="집행 중">집행 중</option>
+          <option value="집행 완료">집행 완료</option>
+          <option value="집행 불가">집행 불가</option>
+        </select>
+        <span>승인</span>
+        <select name="" id="" v-model="approval_status">
+          <option value="" selected>-- 전체 --</option>
+          <option value="승인전">승인전</option>
           <option value="승인요청">승인 요청</option>
           <option value="승인완료">승인 완료</option>
         </select>
@@ -58,6 +66,7 @@
             <th>종료일</th>
             <th>목표 금액</th>
             <th>현재 금액</th>
+            <th>승인</th>
           </tr>
         </thead>
         <tbody>
@@ -73,6 +82,7 @@
             <td>{{ dateFormat(program.end_date, "yyyy-MM-dd") }}</td>
             <td>{{ numberFormat(program.goal_amount) }}원</td>
             <td>{{ numberFormat(program.current_amount) }}원</td>
+            <td>{{ program.approval_status }}</td>
           </tr>
         </tbody>
       </table>
@@ -92,16 +102,33 @@ let startDate = ref("");
 let endDate = ref("");
 let programCode = ref(""); // 프로그램 Select의 값
 let sponsorType = ref(""); // 후원 방법 Select의 값
-let amount = ref(null); // 금액 Input의 값
+// let amount = ref(null); // 금액 Input의 값
 let status = ref(""); // 승인 Select의 값
-let sponsorList = ref([]);
+let approval_status = ref(""); // 승인 Select의 값
+let sponsorList = ref([]); // 전체 조회 조건 조회
+let programList = ref([]); // 검색창 프로그램 명 리스트 불러오기
 const getSponsorList = async (params = {}) => {
   let result = await axios
     .get(`/api/sponsor`, { params: params })
     .catch((err) => console.log(err));
 
+  // API 호출 실패 처리 추가 (이전 대화에서 논의된 부분)
+  if (!result || !result.data) {
+    console.log("조회 결과 데이터가 유효하지 않습니다.");
+    sponsorList.value = [];
+    return;
+  }
   const res = result.data.serviceSponsor;
+
+  // 1. 테이블 목록 갱신
   sponsorList.value = JSON.parse(JSON.stringify(res));
+
+  console.log(sponsorList.value);
+  // 2. 검색 조건이 없는 최초 로딩 시에만 programList를 갱신
+  //    (검색 결과는 programList에 영향을 주지 않아야 함)
+  if (Object.keys(params).length === 0) {
+    programList.value = JSON.parse(JSON.stringify(res));
+  }
   console.log(JSON.parse(JSON.stringify(sponsorList.value)));
 };
 
@@ -117,13 +144,14 @@ const search = () => {
     endDate: endDate.value,
     programCode: programCode.value,
     sponsorType: sponsorType.value,
-    amount: amount.value,
+    // amount: amount.value,
     status: status.value,
+    approval_status: approval_status.value,
   };
 
   // getSponsorList 함수를 검색 파라미터와 함께 호출
-  getSponsorList(searchParams);
   console.log(searchParams);
+  getSponsorList(searchParams);
 };
 
 const programAdd = () => {
@@ -135,8 +163,9 @@ const clear = () => {
   endDate.value = "";
   programCode.value = "";
   sponsorType.value = "";
-  amount.value = null;
+  // amount.value = null;
   status.value = "";
+  approval_status.value = "";
   getSponsorList(); // 전체 리스트 다시 조회
 };
 
