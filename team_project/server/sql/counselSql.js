@@ -6,54 +6,71 @@ module.exports = {
    * - assi_by = ? 조건
    */
   listCounselByAssignee: `
+  SELECT
+    ss.submit_code,
+    writer.name AS writer_name,
+    assi.name   AS assi_name,
+    ss.submit_at,
+    cd.counsel_date,
+    cn.written_at AS note_created_at,
+    cn.status AS status
+  FROM survey_submission ss
+  JOIN users writer
+    ON writer.user_code = ss.written_by
+  LEFT JOIN users assi
+    ON assi.user_code = ss.assi_by
+
+  /* 🔥 상담(note)이 없는 제출은 목록에서 제외 */
+  JOIN counsel_note cn
+    ON cn.submit_code = ss.submit_code
+
+  /* 🔥 상담(detail)이 없는 경우 무시하고 싶으면 INNER JOIN,  
+     임시저장 상태에서도 detail이 없을 수 있으므로 LEFT JOIN 유지 */
+  LEFT JOIN (
     SELECT
-      ss.submit_code,
-      writer.name AS writer_name,
-      assi.name   AS assi_name,
-      ss.submit_at,
-      cd.counsel_date,
-      cn.written_at AS note_created_at,
-      COALESCE(cn.status, ss.status) AS status
-    FROM survey_submission ss
-    JOIN users writer
-      ON writer.user_code = ss.written_by
-    LEFT JOIN users assi
-      ON assi.user_code = ss.assi_by
-    LEFT JOIN counsel_note cn              -- 🔵 LEFT JOIN 으로 변경
-      ON cn.submit_code = ss.submit_code
-    LEFT JOIN counsel_detail cd
-      ON cd.counsel_code = cn.counsel_code
-    WHERE ss.assi_by = ?
-    ORDER BY
-      cd.counsel_date DESC,
-      ss.submit_at DESC,
-      ss.submit_code DESC
-  `,
+      counsel_code,
+      MIN(counsel_date) AS counsel_date
+    FROM counsel_detail
+    GROUP BY counsel_code
+  ) cd
+    ON cd.counsel_code = cn.counsel_code
+
+  WHERE ss.assi_by = ?
+  ORDER BY ss.submit_code
+`,
 
   // 관리자 / 시스템용
   listCounselAll: `
+  SELECT
+    ss.submit_code,
+    writer.name AS writer_name,
+    assi.name   AS assi_name,
+    ss.submit_at,
+    cd.counsel_date,
+    cn.written_at AS note_created_at,
+    cn.status AS status
+  FROM survey_submission ss
+  JOIN users writer
+    ON writer.user_code = ss.written_by
+  LEFT JOIN users assi
+    ON assi.user_code = ss.assi_by
+
+  /* 🔥 상담이 존재하는 제출만 목록에 표시 */
+  JOIN counsel_note cn
+    ON cn.submit_code = ss.submit_code
+
+  LEFT JOIN (
     SELECT
-      ss.submit_code,
-      writer.name AS writer_name,
-      assi.name   AS assi_name,
-      ss.submit_at,
-      cd.counsel_date,
-      cn.written_at AS note_created_at,
-      COALESCE(cn.status, ss.status) AS status
-    FROM survey_submission ss
-    JOIN users writer
-      ON writer.user_code = ss.written_by
-    LEFT JOIN users assi
-      ON assi.user_code = ss.assi_by
-    LEFT JOIN counsel_note cn              -- 🔵 여기도 LEFT JOIN
-      ON cn.submit_code = ss.submit_code
-    LEFT JOIN counsel_detail cd
-      ON cd.counsel_code = cn.counsel_code
-    ORDER BY
-      cd.counsel_date DESC,
-      ss.submit_at DESC,
-      ss.submit_code DESC
-  `,
+      counsel_code,
+      MIN(counsel_date) AS counsel_date
+    FROM counsel_detail
+    GROUP BY counsel_code
+  ) cd
+    ON cd.counsel_code = cn.counsel_code
+
+  ORDER BY ss.submit_code
+`,
+
   // 상담 존재 여부
   getCounselBySubmit: `
     SELECT * FROM counsel_note WHERE submit_code = ?
@@ -73,6 +90,13 @@ module.exports = {
     SET status = ?, written_at = ?
     WHERE counsel_code = ?
   `,
+
+  //상담 재수정
+  updateCounselNoteKeepStatus: `
+  UPDATE counsel_note
+  SET status = 'CB6', written_at = ?
+  WHERE counsel_code = ?
+`,
 
   // 상담 상세 삭제
   deleteCounselDetails: `
@@ -97,13 +121,6 @@ module.exports = {
   insertPriority: `
     INSERT INTO case_priority (submit_code, level, is_current)
     VALUES (?, ?, ?)
-  `,
-
-  // 제출본 상태 업데이트
-  updateSubmissionStatusToReq: `
-    UPDATE survey_submission
-    SET status = ?
-    WHERE submit_code = ?
   `,
 
   /* ✅ 상담 상세 조회용 헤더 */
@@ -186,6 +203,13 @@ module.exports = {
     AND state = 'BA1'
 `,
 
+  // 승인 시 counsel_note 상태 → CB5(검토완료)
+  updateCounselNoteApprove: `
+  UPDATE counsel_note
+  SET status = 'CB5'
+  WHERE counsel_code = ?
+`,
+
   // 상담 승인요청 → 반려(BA3)
   updateApprovalReject: `
   UPDATE request_approval
@@ -198,4 +222,98 @@ module.exports = {
     AND approval_type = 'AE3'
     AND state = 'BA1'
 `,
+
+  // 반려 시 counsel_note 상태 → CB4 (반려로 사용할게오)
+  updateCounselNoteReject: `
+  UPDATE counsel_note
+  SET status = 'CB4'
+  WHERE counsel_code = ?
+`,
+
+  //  특정 상담(counsel_code)에 대한 반려 사유 조회
+  getRejectReasonByCounsel: `
+  SELECT
+    rejection_reason
+  FROM request_approval
+  WHERE linked_table_name = 'counsel_note'
+    AND linked_record_pk = ?
+    AND approval_type = 'AE3'
+    AND state = 'BA3'      -- 반려 상태
+  ORDER BY
+    approval_date DESC,
+    request_date DESC,
+    approval_code DESC
+  LIMIT 1
+`,
+
+  // 임시저장 시 상태를 CB1으로
+  updateCounselNoteTemp: `
+  UPDATE counsel_note
+  SET status = ?, written_at = ?
+  WHERE counsel_code = ?
+`,
+
+  // 🔹 첨부파일 INSERT
+  insertAttachment: `
+    INSERT INTO attachment (
+      original_filename,
+      server_filename,
+      file_path,
+      linked_table_name,
+      linked_record_pk
+    ) VALUES (?, ?, ?, ?, ?)
+  `,
+
+  // 🔹 특정 상담에 묶인 첨부파일 모두 삭제 (필요시 사용, 지금 로직에서는 안 써도 됨)
+  deleteAttachmentsByCounsel: `
+    DELETE FROM attachment
+    WHERE linked_table_name = 'counsel_note'
+      AND linked_record_pk = ?
+  `,
+
+  // 🔹 특정 상담에 묶인 첨부파일 "한 건"만 삭제 (지금 saveCounsel에서 사용하는 쿼리)
+  deleteAttachmentOne: `
+    DELETE FROM attachment
+    WHERE linked_table_name = 'counsel_note'
+      AND linked_record_pk = ?
+      AND attach_code = ?
+  `,
+
+  // 🔹 특정 상담(counsel_note)에 연결된 첨부파일 목록
+  getAttachmentsByCounsel: `
+    SELECT
+      attach_code,
+      original_filename,
+      server_filename,
+      file_path
+    FROM attachment
+    WHERE linked_table_name = 'counsel_note'
+      AND linked_record_pk = ?
+    ORDER BY attach_code
+  `,
+
+  // 🔹 submit_code로 survey_submission의 assi_by 조회
+  getAssigneeBySubmit: `
+    SELECT assi_by
+    FROM survey_submission
+    WHERE submit_code = ?
+    LIMIT 1
+  `,
+
+  // 🔹 해당 submit_code로 이미 support_plan이 있는지 확인
+  getSupportPlanBySubmit: `
+    SELECT *
+    FROM support_plan
+    WHERE submit_code = ?
+    LIMIT 1
+  `,
+
+  // 🔹 support_plan 기본 INSERT
+  insertSupportPlan: `
+    INSERT INTO support_plan (
+      submit_code,
+      status,
+      assi_by
+    ) VALUES (?, ?, ?)
+  `,
 };

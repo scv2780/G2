@@ -4,13 +4,12 @@
       <div>
         <h2 class="text-2xl font-semibold">역할별 제출본 목록</h2>
         <p class="text-gray-500 text-sm">
-          역할에 따라 조회 범위가 달라집니다. (1=일반, 2=담당, 3=관리자,
-          4=시스템)
+          역할에 따라 조회 범위가 달라집니다. (1=일반, 2=담당, 3=관리자, 4=시스템)
         </p>
       </div>
 
       <div class="flex items-center gap-2">
-        <!-- 임시 ROLE / USER 선택 (로그인 붙기 전까지 테스트용) -->
+        <!-- 임시 ROLE / USER 선택 -->
         <label class="text-sm">ROLE</label>
         <select v-model.number="role" class="border px-2 py-1 rounded">
           <option :value="1">1 (일반)</option>
@@ -26,18 +25,20 @@
           class="border px-2 py-1 rounded w-24"
         />
 
-        <button class="border px-3 py-2 rounded" @click="fetchList">
+        <!-- 버튼들 교체 -->
+        <MaterialButton color="dark" size="sm" @click="fetchList">
           불러오기
-        </button>
+        </MaterialButton>
 
         <!-- 일반(ROLE=1)만 노출 -->
-        <button
+        <MaterialButton
           v-if="role === 1"
-          class="border px-3 py-2 rounded bg-black text-white"
+          color="dark"
+          size="sm"
           @click="$router.push('/survey/write')"
         >
           조사지 작성하기
-        </button>
+        </MaterialButton>
       </div>
     </header>
 
@@ -82,7 +83,7 @@
           <td class="border p-2">{{ row.version_detail_no }}</td>
           <td class="border p-2">{{ row.written_by }}</td>
           <td class="border p-2">{{ row.assi_by ?? "-" }}</td>
-          <td class="border p-2">{{ row.status }}</td>
+          <td class="border p-2">{{ statusLabel(row.status) }}</td>
           <td class="border p-2">{{ fmt(row.submit_at) }}</td>
           <td class="border p-2">{{ fmt(row.updated_at) }}</td>
         </tr>
@@ -103,12 +104,12 @@
 import { ref, onMounted, watch } from "vue";
 import { useRouter } from "vue-router";
 import axios from "axios";
+import MaterialButton from "@/components/MaterialButton.vue";
 
 const router = useRouter();
 
-// 테스트용 기본값 (로그인 붙으면 제거하고 실제 세션으로 대체)
-const role = ref(1); // 1=일반, 2=담당, 3=관리자, 4=시스템
-const userId = ref(1); // 현재 사용자 id
+const role = ref(1);
+const userId = ref(1);
 
 const list = ref([]);
 const loading = ref(false);
@@ -122,7 +123,6 @@ async function fetchList() {
       params: { role: role.value, userId: userId.value },
     });
 
-    // ✅ 서버 응답 통일 대응: { success, result } | 배열 직접 반환
     const rows = Array.isArray(data)
       ? data
       : Array.isArray(data?.result)
@@ -144,10 +144,18 @@ function fmt(v) {
   return isNaN(d) ? String(v) : d.toISOString().slice(0, 10);
 }
 
-// 최초 자동 로드
-onMounted(fetchList);
+function statusLabel(code) {
+  switch (code) {
+    case "CA1":
+      return "미검토";
+    case "CA3":
+      return "검토완료";
+    default:
+      return code || "-";
+  }
+}
 
-// UX: role / userId 바뀌면 자동 재조회 (원치 않으면 제거)
+onMounted(fetchList);
 watch([role, userId], fetchList);
 
 function goToDetail(submitCode) {

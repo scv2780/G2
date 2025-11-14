@@ -35,9 +35,10 @@
             name="program_status"
             v-model="formData.status"
           >
-            <option value="집행전">진행전</option>
-            <option value="집행 중" :disabled="!isEditMode">진행중</option>
-            <option value="집행 완료" :disabled="!isEditMode">진행완료</option>
+            <option value="집행전">집행전</option>
+            <option value="집행 중" :disabled="!isEditMode">집행 중</option>
+            <option value="집행 완료" :disabled="!isEditMode">집행 완료</option>
+            <option value="집행 불가" :disabled="!isEditMode">집행 불가</option>
           </select>
         </div>
 

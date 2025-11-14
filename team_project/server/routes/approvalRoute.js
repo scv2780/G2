@@ -175,4 +175,162 @@ router.put("/staff/:code/reject", async (req, res) => {
   }
 });
 
+// 우선순위 승인 요청 목록 (페이징 + 검색/정렬)
+router.get("/priority", async (req, res) => {
+  try {
+    const state = req.query.state || "";
+    const keyword = req.query.keyword || "";
+    const orderBy = req.query.orderBy || "latest";
+
+    const page = parseInt(req.query.page || "1", 10);
+    const size = parseInt(req.query.size || "20", 10);
+
+    const result = await approvalService.getPriorityApprovalList({
+      page,
+      size,
+      state,
+      keyword,
+      orderBy,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: result, // { rows, totalCount, page, size }
+    });
+  } catch (err) {
+    console.error("[GET /api/approvals/priority] 실패:", err.stack || err);
+    return res.status(500).json({
+      status: "error",
+      message: "서버 오류",
+    });
+  }
+});
+
+// 지원계획 승인 요청 목록 (페이징 + 검색/정렬)
+router.get("/support-plan", async (req, res) => {
+  try {
+    const state = req.query.state || "";
+    const keyword = req.query.keyword || "";
+    const orderBy = req.query.orderBy || "latest";
+
+    const page = parseInt(req.query.page || "1", 10);
+    const size = parseInt(req.query.size || "20", 10);
+
+    const result = await approvalService.getSupportPlanApprovalList({
+      page,
+      size,
+      state,
+      keyword,
+      orderBy,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: result, // { rows, totalCount, page, size }
+    });
+  } catch (err) {
+    console.error("[GET /api/approvals/support-plan] 실패:", err.stack || err);
+    return res.status(500).json({
+      status: "error",
+      message: "서버 오류",
+    });
+  }
+});
+
+// 지원결과 승인 요청 목록 (페이징 + 검색/정렬)
+router.get("/support-result", async (req, res) => {
+  try {
+    const state = req.query.state || "";
+    const keyword = req.query.keyword || "";
+    const orderBy = req.query.orderBy || "latest";
+
+    const page = parseInt(req.query.page || "1", 10);
+    const size = parseInt(req.query.size || "20", 10);
+
+    const result = await approvalService.getSupportResultApprovalList({
+      page,
+      size,
+      state,
+      keyword,
+      orderBy,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: result, // { rows, totalCount, page, size }
+    });
+  } catch (err) {
+    console.error(
+      "[GET /api/approvals/support-result] 실패:",
+      err.stack || err
+    );
+    return res.status(500).json({
+      status: "error",
+      message: "서버 오류",
+    });
+  }
+});
+
+// 이벤트 계획 승인 요청 목록 (페이징 + 검색/정렬)
+router.get("/event-plan", async (req, res) => {
+  try {
+    const state = req.query.state || "";
+    const keyword = req.query.keyword || "";
+    const orderBy = req.query.orderBy || "latest";
+
+    const page = parseInt(req.query.page || "1", 10);
+    const size = parseInt(req.query.size || "20", 10);
+
+    const result = await approvalService.getEventPlanApprovalList({
+      page,
+      size,
+      state,
+      keyword,
+      orderBy,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: result, // { rows, totalCount, page, size }
+    });
+  } catch (err) {
+    console.error("[GET /api/approvals/event-plan] 실패:", err.stack || err);
+    return res.status(500).json({
+      status: "error",
+      message: "서버 오류",
+    });
+  }
+});
+
+// 이벤트 결과 승인 요청 목록 (페이징 + 검색/정렬)
+router.get("/event-result", async (req, res) => {
+  try {
+    const state = req.query.state || "";
+    const keyword = req.query.keyword || "";
+    const orderBy = req.query.orderBy || "latest";
+
+    const page = parseInt(req.query.page || "1", 10);
+    const size = parseInt(req.query.size || "20", 10);
+
+    const result = await approvalService.getEventResultApprovalList({
+      page,
+      size,
+      state,
+      keyword,
+      orderBy,
+    });
+
+    return res.status(200).json({
+      status: "success",
+      data: result, // { rows, totalCount, page, size }
+    });
+  } catch (err) {
+    console.error("[GET /api/approvals/event-result] 실패:", err.stack || err);
+    return res.status(500).json({
+      status: "error",
+      message: "서버 오류",
+    });
+  }
+});
+
 module.exports = router;

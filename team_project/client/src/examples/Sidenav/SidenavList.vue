@@ -9,7 +9,7 @@
           class="text-xs ps-4 text-uppercase font-weight-bolder text-white"
           :class="$store.state.isRTL ? 'me-4' : 'ms-2'"
         >
-          MAIN PAGES
+          후원 관리자 페이지
         </h6>
       </li>
 
@@ -18,12 +18,11 @@
           url="#"
           :aria-controls="''"
           v-bind:collapse="false"
-          collapseRef="dashboard"
-          navText="Dashboard"
+          collapseRef="sponsor"
+          navText="후원 프로그램 관리"
         >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5">dashboard</i>
-          </template>
+          <!-- navText = 표시되는 이름 -->
+          <!-- collapseRef = 링크 주소 /{에들어갈 주소} -->
         </sidenav-collapse>
       </li>
 
@@ -33,11 +32,8 @@
           :aria-controls="''"
           v-bind:collapse="false"
           collapseRef="tables"
-          navText="Tables"
+          navText="담당자 관리"
         >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5">table_view</i>
-          </template>
         </sidenav-collapse>
       </li>
 
@@ -47,11 +43,8 @@
           :aria-controls="''"
           v-bind:collapse="false"
           collapseRef="billing"
-          navText="Billing"
+          navText="전체 후원 거래 내역서"
         >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5">receipt_long</i>
-          </template>
         </sidenav-collapse>
       </li>
 
@@ -61,13 +54,8 @@
           :aria-controls="''"
           v-bind:collapse="false"
           collapseRef="rtl-page"
-          navText="Rtl"
+          navText="활동 보고서"
         >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5"
-              >format_textdirection_r_to_l</i
-            >
-          </template>
         </sidenav-collapse>
       </li>
 
@@ -77,23 +65,9 @@
           :aria-controls="''"
           v-bind:collapse="false"
           collapseRef="notifications"
-          navText="Notifications"
+          navText="총괄표 관리"
         >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5">notifications</i>
-          </template>
         </sidenav-collapse>
-      </li>
-
-      <hr class="horizontal light my-3" />
-
-      <li class="mt-3 nav-item">
-        <h6
-          class="text-xs ps-4 text-uppercase font-weight-bolder text-white"
-          :class="$store.state.isRTL ? 'me-4' : 'ms-2'"
-        >
-          ACCOUNT PAGES
-        </h6>
       </li>
 
       <li class="nav-item">
@@ -102,11 +76,8 @@
           :aria-controls="''"
           v-bind:collapse="false"
           collapseRef="profile"
-          navText="Profile"
+          navText="후원 보고서 관리"
         >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5">person</i>
-          </template>
         </sidenav-collapse>
       </li>
 
@@ -116,39 +87,11 @@
           :aria-controls="''"
           v-bind:collapse="false"
           collapseRef="sign-in"
-          navText="SignIn"
+          navText="분기 통지 / 발송 이력"
         >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5">login</i>
-          </template>
-        </sidenav-collapse>
-      </li>
-
-      <li class="nav-item">
-        <sidenav-collapse
-          url="#"
-          :aria-controls="''"
-          v-bind:collapse="false"
-          collapseRef="sign-up"
-          navText="SignUp"
-        >
-          <template v-slot:icon>
-            <i class="material-icons-round opacity-10 fs-5">assignment</i>
-          </template>
         </sidenav-collapse>
       </li>
     </ul>
-
-    <div class="sidenav-footer position-absolute w-100 bottom-0">
-      <div class="mx-3">
-        <a
-          class="btn mt-4 w-100"
-          :class="`bg-gradient-${this.$store.state.color}`"
-          href="https://www.creative-tim.com/product/vue-material-dashboard-2-pro"
-          >Upgrade to pro</a
-        >
-      </div>
-    </div>
   </div>
 </template>
 <script>
@@ -157,18 +100,23 @@ import SidenavCollapse from "./SidenavCollapse.vue";
 
 export default {
   name: "SidenavList",
-  props: {
-    cardBg: String,
+
+  // props: {
+  //   /** ✔ 여기서 menu props 정의 */
+  //   menu: Object,
+  //   cardBg: String,
+  // },
+
+  components: {
+    SidenavCollapse,
   },
+
   data() {
     return {
       title: "Soft UI Dashboard PRO",
       controls: "dashboardsExamples",
       isActive: "active",
     };
-  },
-  components: {
-    SidenavCollapse,
   },
 };
 </script>

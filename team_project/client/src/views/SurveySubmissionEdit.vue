@@ -9,7 +9,9 @@
           {{ submission?.version_detail_no }})
         </p>
       </div>
-      <button class="border px-3 py-2 rounded" @click="goBack">← 상세로</button>
+      <MaterialButton color="dark" size="sm" @click="goBack">
+        ← 상세로
+      </MaterialButton>
     </header>
 
     <div v-if="loading">불러오는 중...</div>
@@ -58,13 +60,16 @@
                 <span v-if="item.is_required === 'Y'" class="text-red-500">*</span>
               </label>
 
-              <!-- TEXT -->
-              <input
+              <!-- TEXT → MaterialInput 사용 -->
+              <MaterialInput
                 v-if="isText(item)"
                 v-model="answers[item.item_code]"
-                type="text"
-                class="border px-3 py-2 rounded w-full"
+                :id="`item-${item.item_code}`"
+                :name="`item-${item.item_code}`"
+                variant="outline"
+                size="default"
                 :placeholder="item.placeholder || ''"
+                :isRequired="item.is_required === 'Y'"
               />
 
               <!-- TEXTAREA -->
@@ -116,12 +121,21 @@
         </div>
 
         <div class="flex items-center justify-end gap-2">
-          <button type="button" class="border px-4 py-2 rounded" @click="goBack">
+          <MaterialButton
+            type="button"
+            color="dark"
+            size="sm"
+            @click="goBack"
+          >
             취소
-          </button>
-          <button type="submit" class="border px-4 py-2 rounded bg-black text-white">
+          </MaterialButton>
+          <MaterialButton
+            type="submit"
+            color="dark"
+            size="sm"
+          >
             수정 완료
-          </button>
+          </MaterialButton>
         </div>
       </form>
     </div>
@@ -132,6 +146,8 @@
 import { ref, onMounted, computed } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import axios from "axios";
+import MaterialButton from "@/components/MaterialButton.vue";
+import MaterialInput from "@/components/MaterialInput.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -154,7 +170,10 @@ const answers = ref({});
 // 권한: 일반 사용자 + 본인 작성건 (둘 다 숫자로 강제 비교)
 const canEdit = computed(() => {
   if (!submission.value) return false;
-  return role.value === 1 && Number(submission.value.written_by) === Number(userId.value);
+  return (
+    role.value === 1 &&
+    Number(submission.value.written_by) === Number(userId.value)
+  );
 });
 
 onMounted(async () => {
@@ -168,7 +187,8 @@ async function fetchDetail() {
   error.value = "";
   try {
     const res = await axios.get(`/api/survey/submission/${submitCode}`);
-    if (res.data?.success === false) throw new Error(res.data.message || "조회 실패");
+    if (res.data?.success === false)
+      throw new Error(res.data.message || "조회 실패");
 
     const payload = res.data?.result ?? res.data;
     submissionRef.value = normalizePayload(payload);
@@ -192,7 +212,9 @@ function initAnswersFromDetail() {
             ? [String(parsed)]
             : [];
         } else {
-          map[it.item_code] = Array.isArray(parsed) ? parsed[0] ?? "" : parsed ?? "";
+          map[it.item_code] = Array.isArray(parsed)
+            ? parsed[0] ?? ""
+            : parsed ?? "";
         }
       });
     });
@@ -218,9 +240,11 @@ async function save() {
           if (it.is_required === "Y") {
             const v = answers.value[it.item_code];
             if (isCheckbox(it)) {
-              if (!Array.isArray(v) || v.length === 0) missing.push(it.question_text);
+              if (!Array.isArray(v) || v.length === 0)
+                missing.push(it.question_text);
             } else {
-              if (v == null || String(v).trim() === "") missing.push(it.question_text);
+              if (v == null || String(v).trim() === "")
+                missing.push(it.question_text);
             }
           }
         });
@@ -232,8 +256,12 @@ async function save() {
     }
 
     const payload = { answers: answers.value, updated_by: userId.value };
-    const res = await axios.put(`/api/survey/submission/${submitCode}`, payload);
-    if (res.data?.success === false) throw new Error(res.data.message || "수정 실패");
+    const res = await axios.put(
+      `/api/survey/submission/${submitCode}`,
+      payload
+    );
+    if (res.data?.success === false)
+      throw new Error(res.data.message || "수정 실패");
 
     alert("수정 완료!");
     goBack();
@@ -243,10 +271,18 @@ async function save() {
 }
 
 /* ---------- 타입/유틸 ---------- */
-function isRadio(it) { return String(it.question_type).toUpperCase() === "RADIO"; }
-function isCheckbox(it) { return String(it.question_type).toUpperCase() === "CHECKBOX"; }
-function isText(it) { return String(it.question_type).toUpperCase() === "TEXT"; }
-function isTextarea(it) { return String(it.question_type).toUpperCase() === "TEXTAREA"; }
+function isRadio(it) {
+  return String(it.question_type).toUpperCase() === "RADIO";
+}
+function isCheckbox(it) {
+  return String(it.question_type).toUpperCase() === "CHECKBOX";
+}
+function isText(it) {
+  return String(it.question_type).toUpperCase() === "TEXT";
+}
+function isTextarea(it) {
+  return String(it.question_type).toUpperCase() === "TEXTAREA";
+}
 
 function normalizeOptions(val) {
   if (val == null) return [];
@@ -255,7 +291,11 @@ function normalizeOptions(val) {
   if (typeof val === "string") {
     const s = val.trim();
     if (!s) return [];
-    try { return JSON.parse(s); } catch { return []; }
+    try {
+      return JSON.parse(s);
+    } catch {
+      return [];
+    }
   }
   return [];
 }
@@ -278,8 +318,15 @@ function parseAnswerText(answer_text) {
   if (typeof answer_text === "string") {
     const s = answer_text.trim();
     if (!s) return "";
-    if ((s.startsWith("[") && s.endsWith("]")) || (s.startsWith("{") && s.endsWith("}"))) {
-      try { return JSON.parse(s); } catch { return s; }
+    if (
+      (s.startsWith("[") && s.endsWith("]")) ||
+      (s.startsWith("{") && s.endsWith("}"))
+    ) {
+      try {
+        return JSON.parse(s);
+      } catch {
+        return s;
+      }
     }
     return s;
   }
@@ -288,5 +335,9 @@ function parseAnswerText(answer_text) {
 </script>
 
 <style scoped>
-section { color: #111; }
+section {
+  color: #111;
+}
+
+
 </style>

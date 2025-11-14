@@ -47,8 +47,38 @@ const routes = [
     component: () => import('../views/StaffApprovals.vue'),
   },
   {
-    path: '/dashboard',
-    name: 'Dashboard',
+    path: "/priorityApprovals",
+    name: "PriorityApprovals",
+    component: () => import("../views/PriorityApproval.vue"),
+  },
+  {
+    path: "/supportPlanApprovals",
+    name: "SupportPlanApprovals",
+    component: () => import("../views/SupportPlanApproval.vue"),
+  },
+  {
+    path: "/supportResultApprovals",
+    name: "SupportResultApprovals",
+    component: () => import("../views/SupportResultApproval.vue"),
+  },
+  {
+    path: "/eventPlanApprovals",
+    name: "EventPlanApprovals",
+    component: () => import("../views/EventPlanApproval.vue"),
+  },
+  {
+    path: "/eventResultApprovals",
+    name: "EventResultApprovals",
+    component: () => import("../views/EventResultApproval.vue"),
+  },
+  {
+    path: "/sponsorshipPlanApprovals",
+    name: "SponsorshipPlanApprovals",
+    component: () => import("../views/SponsorshipPlanApproval.vue"),
+  },
+  {
+    path: "/dashboard",
+    name: "Dashboard",
     component: Dashboard,
   },
   {
@@ -177,6 +207,12 @@ const routes = [
     name: 'counsel-detail',
     component: () => import('../views/CounselDetail.vue'),
     props: true,
+  },
+  // 지원계획목록
+  {
+    path: "/plan-list",
+    name: "planList",
+    component: () => import("../views/PlanList.vue"),
   },
   // 이벤트 메인페이지
   {
