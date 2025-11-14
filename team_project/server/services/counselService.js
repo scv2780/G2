@@ -11,19 +11,19 @@ module.exports = {
   },
 
   // 상담 작성
-  async saveCounsel(body) {
-    return counselMapper.saveCounsel(body);
+  async saveCounsel(body, files) {
+    return counselMapper.saveCounsel(body, files);
   },
 
   //상담 상세
   async getCounselDetail(submitCode) {
     return counselMapper.getCounselDetail(submitCode);
   },
-//상담 승인
+  //상담 승인
   async approveCounsel(submitCode) {
     return await counselMapper.approveCounsel(submitCode);
   },
-//상담 반려
+  //상담 반려
   async rejectCounsel(submitCode, reason) {
     return await counselMapper.rejectCounsel(submitCode, reason);
   },
@@ -31,5 +31,9 @@ module.exports = {
   // 반려 사유 조회
   async getRejectionReason(submitCode) {
     return await counselMapper.getRejectionReason(submitCode);
+  },
+  //임시저장
+  async saveCounselTemp(body) {
+    return counselMapper.saveCounselTemp(body);
   },
 };

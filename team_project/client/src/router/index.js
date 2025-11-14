@@ -178,6 +178,12 @@ const routes = [
     component: () => import("../views/CounselDetail.vue"),
     props: true,
   },
+  // 지원계획목록
+  {
+    path: "/plan-list",
+    name: "planList",
+    component: () => import("../views/PlanList.vue"),
+  },
   // 이벤트 메인페이지
   {
     path: "/event",

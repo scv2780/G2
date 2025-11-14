@@ -57,36 +57,46 @@
               <td class="p-3 align-middle">
                 {{ formatDate(row.submit_at) }}
               </td>
+
+              <!-- 🔥 임시저장(CB1)일 때는 상담일 / 작성일 숨김 -->
               <td class="p-3 align-middle">
-                {{ formatDate(row.counsel_date) }}
+                {{
+                  isTempStatus(row.status) ? "-" : formatDate(row.counsel_date)
+                }}
               </td>
               <td class="p-3 align-middle">
-                {{ formatDate(row.note_created_at) }}
+                {{
+                  isTempStatus(row.status)
+                    ? "-"
+                    : formatDate(row.note_created_at)
+                }}
               </td>
 
-             <td class="p-3 align-middle">
-  <!-- CB4(반려)일 때만 클릭 가능 + 모달 오픈 -->
-  <span
-    v-if="row.status === 'CB4'"
-    class="text-red-600 underline cursor-pointer"
-    @click.stop="openRejectReason(row)"
-  >
-    {{ statusLabel(row.status) }}
-  </span>
+              <td class="p-3 align-middle">
+                <!-- CB4(반려)일 때만 클릭 가능 + 모달 오픈 -->
+                <span
+                  v-if="row.status === 'CB4'"
+                  class="text-red-600 underline cursor-pointer"
+                  @click.stop="openRejectReason(row)"
+                >
+                  {{ statusLabel(row.status) }}
+                </span>
 
-  <!-- 나머지 상태는 그냥 텍스트 -->
-  <span v-else>
-    {{ statusLabel(row.status) }}
-  </span>
-</td>
-
+                <!-- 나머지 상태는 그냥 텍스트 -->
+                <span v-else>
+                  {{ statusLabel(row.status) }}
+                </span>
+              </td>
 
               <!-- 🔹 버튼 열: 항상 존재, 내용만 조건부 -->
               <td class="p-3 align-middle text-center">
                 <template v-if="isAssigneeRole">
-                  <!-- CB2 → 작성하기 -->
+                  <!-- CB1, CB2 → 작성하기 -->
                   <MaterialButton
-                    v-if="normStatus(row.status) === 'CB2'"
+                    v-if="
+                      normStatus(row.status) === 'CB2' ||
+                      normStatus(row.status) === 'CB1'
+                    "
                     color="dark"
                     size="sm"
                     @click.stop="goWrite(row)"
@@ -104,14 +114,14 @@
                     수정하기
                   </MaterialButton>
                   <!-- 🔥 CB4(반려) → 재수정하기 -->
-    <MaterialButton
-      v-else-if="normStatus(row.status) === 'CB4'"
-      color="dark"
-      size="sm"
-      @click.stop="goEdit(row)"
-    >
-      재수정하기
-    </MaterialButton>
+                  <MaterialButton
+                    v-else-if="normStatus(row.status) === 'CB4'"
+                    color="dark"
+                    size="sm"
+                    @click.stop="goEdit(row)"
+                  >
+                    재수정하기
+                  </MaterialButton>
                 </template>
               </td>
             </tr>
@@ -119,34 +129,38 @@
         </table>
       </div>
     </div>
+
     <!-- 🔻 반려 사유 모달 -->
-<div v-if="rejectReasonModalOpen" class="modal-overlay">
-  <div class="modal-container">
-    <h3 class="text-lg font-semibold mb-3">반려 사유</h3>
+    <div v-if="rejectReasonModalOpen" class="modal-overlay">
+      <div class="modal-container">
+        <h3 class="text-lg font-semibold mb-3">반려 사유</h3>
 
-    <div v-if="rejectReasonLoading" class="text-sm text-gray-500">
-      불러오는 중...
+        <div v-if="rejectReasonLoading" class="text-sm text-gray-500">
+          불러오는 중...
+        </div>
+
+        <div v-else-if="rejectReasonError" class="text-sm text-red-600">
+          {{ rejectReasonError }}
+        </div>
+
+        <div
+          v-else
+          class="text-sm whitespace-pre-line text-gray-800 max-h-60 overflow-y-auto border rounded px-3 py-2 bg-gray-50"
+        >
+          {{ rejectReasonText || "등록된 반려 사유가 없습니다." }}
+        </div>
+
+        <div class="modal-actions mt-4 flex justify-end gap-2">
+          <MaterialButton
+            color="dark"
+            size="sm"
+            @click="closeRejectReasonModal"
+          >
+            닫기
+          </MaterialButton>
+        </div>
+      </div>
     </div>
-
-    <div v-else-if="rejectReasonError" class="text-sm text-red-600">
-      {{ rejectReasonError }}
-    </div>
-
-    <div
-      v-else
-      class="text-sm whitespace-pre-line text-gray-800 max-h-60 overflow-y-auto border rounded px-3 py-2 bg-gray-50"
-    >
-      {{ rejectReasonText || "등록된 반려 사유가 없습니다." }}
-    </div>
-
-    <div class="modal-actions mt-4 flex justify-end gap-2">
-      <MaterialButton color="dark" size="sm" @click="closeRejectReasonModal">
-        닫기
-      </MaterialButton>
-    </div>
-  </div>
-</div>
-
   </section>
 </template>
 
@@ -202,13 +216,17 @@ function closeRejectReasonModal() {
   rejectReasonModalOpen.value = false;
 }
 
-
 // 🔹 담당자 역할 여부 (2이면 true)
 const isAssigneeRole = computed(() => Number(selectedRole.value) === 2);
 
 // 🔹 status 정규화 (혹시 모를 공백 / 소문자 대비)
 function normStatus(raw) {
   return (raw ?? "").toString().trim().toUpperCase();
+}
+
+// 🔹 임시저장 상태인지 여부 (CB1)
+function isTempStatus(code) {
+  return normStatus(code) === "CB1";
 }
 
 function formatDate(val) {
@@ -218,7 +236,7 @@ function formatDate(val) {
 function statusLabel(code) {
   switch (normStatus(code)) {
     case "CB1":
-      return "-";
+      return "상담전"; // 임시저장이지만 목록에선 상담전으로 표시
     case "CB2":
       return "상담전";
     case "CB3":
@@ -227,6 +245,8 @@ function statusLabel(code) {
       return "반려";
     case "CB5":
       return "검토완료";
+    case "CB6":
+      return "재승인요청";
     default:
       return code || "-";
   }
@@ -351,5 +371,4 @@ watch(selectedRole, fetchList);
   max-width: 480px;
   box-shadow: 0 10px 25px rgba(15, 23, 42, 0.35);
 }
-
 </style>
