@@ -126,7 +126,7 @@ const activateUserByApproval = `
  WHERE ra.approval_code = ?
 `;
 
-// ✅ 회원가입(일반회원/기관담당자) 반려 시 이력 저장
+// ✅ 회원가입 반려 시 이력 저장
 const insertSignupRejectHistory = `
 INSERT INTO user_signup_reject_history (
     approval_code,
@@ -155,7 +155,7 @@ JOIN users u
 LEFT JOIN organization o
   ON o.org_code = u.org_code
 WHERE ra.approval_code = ?
-  AND ra.approval_type IN ('AE1','AE2');  -- ★ 일반회원/기관담당자 가입요청만 대상
+  AND ra.approval_type IN ('AE1','AE2');  -- 기관 관리자 승인요청, 기관 담당자 승인요청
 `;
 
 // ✅ approvalCode로 가입 요청자의 user_code 조회 (AE1/AE2 전용)

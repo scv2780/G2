@@ -47,7 +47,7 @@ async function approve({ approvalCode, processorCode }) {
   return result;
 }
 
-/** ✅ 반려 + 메일 발송 */
+// 반려 + 메일 발송
 async function reject({ approvalCode, reason, processorCode }) {
   // 1) 상태를 BA3(반려)로 변경
   const result = await approvalMapper.updateApprovalState({
@@ -64,6 +64,7 @@ async function reject({ approvalCode, reason, processorCode }) {
   // 2) 요청자 정보 조회 (이메일, 이름 등)
   const info = await approvalMapper.findApprovalWithUser({ approvalCode });
 
+  // 3) 반려 메일 발송
   if (info && info.email) {
     try {
       await mailer.sendRejectMail({

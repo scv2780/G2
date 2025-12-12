@@ -48,53 +48,30 @@ async function managerApprovalList({ state, keyword, page, size }) {
   }
 }
 
-/** ✅ 승인/반려 공통 업데이트 + 승인 시 사용자 활성화(is_active=1)
- *  + 회원가입 반려 시 히스토리 복사 후 users 삭제
+/**  승인/반려 공통 업데이트 +
+ *   승인 시 사용자 활성화(is_active=1),
+ *   반려 시 히스토리 복사 + FK 끊기 + 유저 삭제
  */
 async function updateApprovalState({ approvalCode, processorCode, nextState }) {
   const conn = await pool.getConnection();
   try {
-    await conn.beginTransaction();
+    await conn.beginTransaction(); // 트랜잭션 시작
 
     const params = [nextState, processorCode, approvalCode];
-
-    console.log(
-      "[approvalMapper] updateApprovalState SQL:",
-      approvalSQL.updateApprovalState,
-      "params:",
-      params
-    );
 
     const ret = await conn.query(approvalSQL.updateApprovalState, params);
     const result = ret[0] || ret;
 
-    console.log(
-      "[approvalMapper] updateApprovalState result:",
-      result.affectedRows
-    );
-
     // 변경된 행이 없으면 추가 작업 없이 커밋만
     if (result.affectedRows > 0) {
-      // ✅ 승인(BA2)일 때만 사용자 계정 활성화
+      // 승인(BA2)일 때만 사용자 계정 활성화
       if (nextState === "BA2") {
-        console.log(
-          "[approvalMapper] activateUserByApproval SQL:",
-          approvalSQL.activateUserByApproval,
-          "params:",
-          [approvalCode]
-        );
         await conn.query(approvalSQL.activateUserByApproval, [approvalCode]);
       }
 
-      // ✅ 반려(BA3)일 때: 회원가입(AE1/AE2)인 경우 히스토리 + FK 끊고 + user 삭제
+      // 반려(BA3)일 때: AE1/AE2 가입요청인 경우 이력 저장 후 유저 삭제
       if (nextState === "BA3") {
         // 1) 히스토리 복사
-        console.log(
-          "[approvalMapper] insertSignupRejectHistory SQL:",
-          approvalSQL.insertSignupRejectHistory,
-          "params:",
-          [approvalCode]
-        );
         await conn.query(approvalSQL.insertSignupRejectHistory, [approvalCode]);
 
         // 2) approvalCode로 user_code 조회
@@ -104,43 +81,22 @@ async function updateApprovalState({ approvalCode, processorCode, nextState }) {
         const userRows = rowsFrom(retUser);
         const userCode = userRows[0]?.user_code;
 
-        console.log(
-          "[approvalMapper] findUserCodeByApproval result userCode:",
-          userCode
-        );
-
         if (userCode) {
           // 3) FK 끊기: request_approval.requester_code = NULL
-          console.log(
-            "[approvalMapper] clearRequesterCodeByApproval SQL:",
-            approvalSQL.clearRequesterCodeByApproval,
-            "params:",
-            [approvalCode]
-          );
           await conn.query(approvalSQL.clearRequesterCodeByApproval, [
             approvalCode,
           ]);
 
           // 4) users 삭제
-          console.log(
-            "[approvalMapper] deleteUserByApproval SQL:",
-            approvalSQL.deleteUserByApproval,
-            "params:",
-            [userCode]
-          );
           await conn.query(approvalSQL.deleteUserByApproval, [userCode]);
-        } else {
-          console.log(
-            "[approvalMapper] findUserCodeByApproval: no user_code found, skip delete"
-          );
         }
       }
     }
 
-    await conn.commit();
+    await conn.commit(); // 모든 작업 성공 시 커밋
     return result;
   } catch (err) {
-    await conn.rollback();
+    await conn.rollback(); // 에러 시 전체 롤백
     throw err;
   } finally {
     conn.release();

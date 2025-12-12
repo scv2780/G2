@@ -12,7 +12,7 @@ module.exports = {
     writer.name       AS writer_name,
     assi.name         AS assi_name,
     org.org_name      AS org_name,
-    cp.level          AS level          -- 🔹 우선순위 추가
+    cp.level          AS level         
   FROM support_plan sp
   JOIN survey_submission ss
     ON ss.submit_code = sp.submit_code
@@ -25,9 +25,9 @@ module.exports = {
   LEFT JOIN organization org
     ON org.org_code = writer.org_code
   LEFT JOIN (
-    SELECT submit_code, MAX(level) AS level
+    SELECT submit_code, level
     FROM case_priority
-    GROUP BY submit_code
+    WHERE is_current = 'Y'
   ) cp
     ON cp.submit_code = sp.submit_code
   ORDER BY sp.plan_code DESC
@@ -45,7 +45,7 @@ module.exports = {
     writer.name       AS writer_name,
     assi.name         AS assi_name,
     org.org_name      AS org_name,
-    cp.level          AS level          -- 🔹 우선순위
+    cp.level          AS level         
   FROM support_plan sp
   JOIN survey_submission ss
     ON ss.submit_code = sp.submit_code
@@ -58,9 +58,9 @@ module.exports = {
   LEFT JOIN organization org
     ON org.org_code = writer.org_code
   LEFT JOIN (
-    SELECT submit_code, MAX(level) AS level
+    SELECT submit_code, level
     FROM case_priority
-    GROUP BY submit_code
+    WHERE is_current = 'Y'
   ) cp
     ON cp.submit_code = sp.submit_code
   WHERE ss.assi_by = ?
@@ -79,7 +79,7 @@ module.exports = {
     writer.name       AS writer_name,
     assi.name         AS assi_name,
     org.org_name      AS org_name,
-    cp.level          AS level          -- 🔹 우선순위
+    cp.level          AS level          
   FROM support_plan sp
   JOIN survey_submission ss
     ON ss.submit_code = sp.submit_code
@@ -92,9 +92,9 @@ module.exports = {
   LEFT JOIN organization org
     ON org.org_code = writer.org_code
   LEFT JOIN (
-    SELECT submit_code, MAX(level) AS level
+    SELECT submit_code, level
     FROM case_priority
-    GROUP BY submit_code
+    WHERE is_current = 'Y'
   ) cp
     ON cp.submit_code = sp.submit_code
   WHERE ss.written_by = ?
@@ -113,7 +113,7 @@ module.exports = {
     writer.name       AS writer_name,
     assi.name         AS assi_name,
     org.org_name      AS org_name,
-    cp.level          AS level          -- 🔹 우선순위
+    cp.level          AS level         
   FROM support_plan sp
   JOIN survey_submission ss
     ON ss.submit_code = sp.submit_code
@@ -126,16 +126,16 @@ module.exports = {
   LEFT JOIN organization org
     ON org.org_code = writer.org_code
   LEFT JOIN (
-    SELECT submit_code, MAX(level) AS level
+    SELECT submit_code, level
     FROM case_priority
-    GROUP BY submit_code
+    WHERE is_current = 'Y'
   ) cp
     ON cp.submit_code = sp.submit_code
   WHERE org.org_code = ?
   ORDER BY sp.plan_code DESC
 `,
 
-  // 🔹 담당자 상단 테이블용 (counsel_note.status = 'CB5')
+  // 담당자 상단 테이블용 (counsel_note.status = 'CB5')
   listAssigneePlanCandidates: `
   SELECT
     ss.submit_code,
@@ -143,7 +143,7 @@ module.exports = {
     ss.submit_at,
     c.child_name           AS child_name,
     writer.name            AS writer_name,
-    MAX(cp.level)          AS level      -- 🔹 우선순위
+    cp.level               AS level     
   FROM survey_submission ss
   JOIN counsel_note cn
     ON cn.submit_code = ss.submit_code
@@ -151,7 +151,11 @@ module.exports = {
     ON c.child_code = ss.child_code
   JOIN users writer
     ON writer.user_code = ss.written_by
-  LEFT JOIN case_priority cp            -- 🔹 우선순위 조인
+  LEFT JOIN (
+    SELECT submit_code, level
+    FROM case_priority
+    WHERE is_current = 'Y'
+  ) cp
     ON cp.submit_code = ss.submit_code
   WHERE
     ss.assi_by = ?
@@ -161,7 +165,8 @@ module.exports = {
     ss.child_code,
     ss.submit_at,
     c.child_name,
-    writer.name
+    writer.name,
+    cp.level
   ORDER BY
     ss.submit_at DESC
 `,
@@ -277,7 +282,7 @@ GROUP BY
     ) VALUES (?, ?, ?, ?, ?)
   `,
 
-  // 🔹 planCode로 지원계획 헤더 조회
+  // planCode로 지원계획 헤더 조회
   getSupportPlanDetailByCode: `
     SELECT
       sp.plan_code,
@@ -290,7 +295,7 @@ GROUP BY
     WHERE sp.plan_code = ?
   `,
 
-  // 🔹 planCode로 지원계획 item들 조회 (메인 + 추가 계획)
+  // planCode로 지원계획 item들 조회 (메인 + 추가 계획)
   getSupportPlanItemsByPlanCode: `
     SELECT
       plan_item_code,
@@ -303,7 +308,7 @@ GROUP BY
     ORDER BY plan_item_code ASC
   `,
 
-  // 🔹 planCode 기준 첨부파일 목록 조회
+  // planCode 기준 첨부파일 목록 조회
   getAttachmentsBySupportPlan: `
     SELECT
       attach_code,
@@ -316,7 +321,7 @@ GROUP BY
     ORDER BY attach_code ASC
   `,
 
-  // 🔹 plan_code 기준으로 계획 기간만 조회 (history before/after용)
+  // plan_code 기준으로 계획 기간만 조회 (history before/after용)
   getSupportPlanPeriodByCode: `
     SELECT
       plan_from,
@@ -326,7 +331,7 @@ GROUP BY
     LIMIT 1
   `,
 
-  // 🔹 plan_code 기준으로 계획 기간만 수정 (수정 화면에서 사용)
+  // plan_code 기준으로 계획 기간만 수정 (수정 화면에서 사용)
   updateSupportPlanPeriodByCode: `
     UPDATE support_plan
     SET
@@ -335,7 +340,7 @@ GROUP BY
     WHERE plan_code = ?
   `,
 
-  // 🔹 첨부파일 한 건 삭제 (삭제 예정 처리된 것)
+  // 첨부파일 한 건 삭제 (삭제 예정 처리된 것)
   deleteAttachmentByCode: `
     DELETE FROM attachment
     WHERE attach_code = ?
@@ -358,7 +363,7 @@ GROUP BY
     LIMIT 1
   `,
 
-  // 🔹 임시저장 상태의 첨부 한 건 삭제 (예전 로직용 - 현재는 안 쓸 수도 있음)
+  // 임시저장 상태의 첨부 한 건 삭제 (예전 로직용 - 현재는 안 쓸 수도 있음)
   deleteTempAttachmentByCode: `
   DELETE FROM attachment
   WHERE linked_table_name = 'support_plan_temp'
@@ -380,7 +385,7 @@ GROUP BY
     WHERE plan_code = ?
   `,
 
-  // 🔹 submit_code로 survey_submission의 assi_by(담당자) 조회
+  // submit_code로 survey_submission의 assi_by(담당자) 조회
   getAssigneeBySubmit: `
     SELECT assi_by
     FROM survey_submission
@@ -388,7 +393,7 @@ GROUP BY
     LIMIT 1
   `,
 
-  // 🔹 해당 support_plan(plan_code)에 대한 승인요청이 이미 있는지 체크
+  // 해당 support_plan(plan_code)에 대한 승인요청이 이미 있는지 체크
   getApprovalForPlan: `
     SELECT approval_code
     FROM request_approval
@@ -399,7 +404,7 @@ GROUP BY
     LIMIT 1
   `,
 
-  // 🔹 지원계획(support_plan) 승인요청 INSERT
+  // 지원계획(support_plan) 승인요청 INSERT
   insertRequestApprovalForPlan: `
     INSERT INTO request_approval (
       requester_code,
@@ -424,7 +429,7 @@ GROUP BY
     )
   `,
 
-  // 🔹 지원계획 승인요청 → 승인(BA2)
+  // 지원계획 승인요청 → 승인(BA2)
   updateApprovalApproveForPlan: `
   UPDATE request_approval
   SET
@@ -438,7 +443,7 @@ GROUP BY
     AND state = 'BA1'
 `,
 
-  // 🔹 지원계획 승인요청 → 반려(BA3)
+  // 지원계획 승인요청 → 반려(BA3)
   updateApprovalRejectForPlan: `
     UPDATE request_approval
     SET
@@ -468,7 +473,7 @@ GROUP BY
   LIMIT 1
 `,
 
-  // 🔹 plan_code 로 support_result 이미 있는지 확인
+  // plan_code 로 support_result 이미 있는지 확인
   getSupportResultByPlan: `
     SELECT
       result_code
@@ -477,7 +482,7 @@ GROUP BY
     LIMIT 1
   `,
 
-  // 🔹 지원계획 승인 시 support_result 헤더 자동 생성
+  //  지원계획 승인 시 support_result 헤더 자동 생성
   insertSupportResultFromPlan: `
     INSERT INTO support_result (
       plan_code,

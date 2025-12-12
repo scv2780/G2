@@ -254,7 +254,7 @@ const priorityMap = {
 
 const getModifierRoleName = (roleCode) => modifierRoleMap[roleCode] || "-";
 
-// 🔹 변경 항목 컬럼명을 한글로 변환
+// 변경 항목 컬럼명을 한글로 변환
 const getChangeItemLabel = (row) => {
   if (!row) return "";
 
@@ -371,7 +371,7 @@ const getChangeItemLabel = (row) => {
   return rawColumn;
 };
 
-// 🔹 before_change / after_change 값 포맷팅
+// before_change / after_change 값 포맷팅
 const formatHistoryValue = (value) => {
   if (value == null || value === "") return "";
 
@@ -383,7 +383,7 @@ const formatHistoryValue = (value) => {
       const obj = JSON.parse(str);
 
       if (typeof obj !== "object" || Array.isArray(obj) || obj === null) {
-        // JSON이 아닌 단일 값이 BB 코드일 수도 있으니 매핑
+        // JSON이 아닌 단일 값이 BB(공통코드) 일 수도 있으니 매핑
         return priorityMap[str] || str;
       }
 
@@ -397,7 +397,7 @@ const formatHistoryValue = (value) => {
           return `${key}: ${mappedArr.join(", ")}`;
         }
 
-        // 단일 값이 BB 코드라면 치환
+        // 단일 값이 BB(공통코드) 라면 치환
         if (typeof val === "string" && priorityMap[val]) {
           return `${key}: ${priorityMap[val]}`;
         }
@@ -407,12 +407,12 @@ const formatHistoryValue = (value) => {
 
       return parts.join(", ");
     } catch (e) {
-      // JSON 파싱 실패 → 단일 값이 BB 코드면 매핑
+      // JSON 파싱 실패 → 단일 값이 BB(공통코드) 이면 매핑
       return priorityMap[str] || str;
     }
   }
 
-  // JSON이 아니면 단일 값이 BB 코드인지 체크
+  // JSON이 아니면 단일 값이 BB(공통코드)인지 체크
   return priorityMap[str] || str;
 };
 
