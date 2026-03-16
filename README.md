@@ -1,7 +1,7 @@
 # G2 장애인 지원 복지 프로그램
 
 <p align="center">
-<img width="1889" alt="메인 화면" "https://github.com/user-attachments/assets/16af864c-6498-4189-b915-a187f6d5b208"/>
+<img width="1889" alt="메인 화면" src="https://github.com/user-attachments/assets/6a214a16-b317-49a8-8e57-175bf7408ab2"/>
 </p>
 
 ---
@@ -41,7 +41,7 @@ G2 장애인 지원 프로그램은 장애인 복지 지원 과정을 효율적�
 지원 신청, 상담 관리, 기관 승인, 후원 및 이벤트 기능을 하나의 시스템에서 통합적으로 관리하여 복지 지원 업무의 효율성을 높이는 것을 목표로 개발되었습니다.
 
 ### 개발 일정
-- **2025.10.31 ~ 2025.11.25 (약 4주)**
+- **2025.10.31 ~ 2025.12.01 (약 4주)**
 
 ---
 
@@ -90,7 +90,7 @@ G2 장애인 지원 프로그램은 장애인 복지 지원 과정을 효율적�
 ---
 
 # 개발 환경
-
+```
 [FRONTEND] Vue, Pinia  
 [BACKEND] Express, Nodemon  
 [DATABASE] MySQL, MariaDB  
@@ -98,7 +98,7 @@ G2 장애인 지원 프로그램은 장애인 복지 지원 과정을 효율적�
 [DEVOPS] GitHub Actions  
 [TOOL] VSCode  
 [COLLABORATION] Discord, GitHub  
-
+```
 ---
 
 # 데이터 베이스
@@ -151,11 +151,45 @@ G2 장애인 지원 프로그램은 장애인 복지 지원 과정을 효율적�
 
 # 후원관리 파트
 
-후원 신청 및 후원금 결제 기능을 제공합니다.
+후원 프로그램 운영과 후원금 결제 기능을 제공합니다.  
+사용자는 진행 중인 후원 프로그램을 확인하고 후원 금액을 선택하여 결제할 수 있으며,  
+후원 내역과 활동 보고서를 통해 후원금 사용 내역을 확인할 수 있습니다.
 
-- 후원 신청
-- 후원금 결제
-- 후원 내역 관리
+---
+
+## 주요 기능
+
+- 후원 프로그램 등록 및 관리 (기관 담당자)
+- 후원 프로그램 승인 요청 및 승인 관리
+- 카카오페이 API 기반 후원 결제 기능
+- 후원 내역 조회 및 관리
+- 후원 활동 보고서 작성 및 열람 (CKEditor5 적용)
+
+---
+
+## 프로그램 관리
+
+<p align="center">
+ <img width="400" alt="후원 프로그램 관리" src="https://github.com/user-attachments/assets/9d7f1ab0-aadd-42f2-878c-248be270f3d2" />
+ <img width="400" alt="후원 프로그램 등록" src="https://github.com/user-attachments/assets/70111fa3-a085-4af6-ad0c-760ecb8ee46f" />
+</p>
+
+---
+
+## 후원 결제
+
+<p align="center">
+ <img width="600" alt="후원 프로그램 결제" src="https://github.com/user-attachments/assets/b9fcd6d2-6d98-47ef-a7f8-491d28751685" />
+</p>
+
+---
+
+## 후원 활동 보고서
+
+<p align="center">
+  <img width="400" alt="활동 보고서" src="https://github.com/user-attachments/assets/67c7e7a6-1de8-487b-b299-4371ee11fe0b" />
+  <img width="400" alt="활동 보고서 등록" src="https://github.com/user-attachments/assets/3204b0d7-92cf-4514-9f3a-4b1d805e2e59" />
+</p>
 
 ---
 
