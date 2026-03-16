@@ -150,8 +150,7 @@ G2 장애인 지원 프로그램은 장애인 복지 지원 과정을 효율적�
 ---
 
 # 후원관리 파트
-<br>
-🔗 [GitHub 개인 Repository 바로가기](https://github.com/Peinoi/G2)
+🔗 [GitHub 개인 Repository 바로가기](https://github.com/Peinoi/G2)<br>
 후원 프로그램 운영과 후원금 결제 기능을 제공합니다.  
 사용자는 진행 중인 후원 프로그램을 확인하고 후원 금액을 선택하여 결제할 수 있으며,  
 후원 내역과 활동 보고서를 통해 후원금 사용 내역을 확인할 수 있습니다.
